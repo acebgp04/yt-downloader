@@ -1,0 +1,6 @@
+flask
+yt-dlp
+flask-sqlalchemy
+flask-login
+stripe
+python-dotenv

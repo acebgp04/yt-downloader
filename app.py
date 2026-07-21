@@ -1,0 +1,154 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from flask import Flask, request, jsonify, send_file, render_template
+from flask_login import LoginManager, current_user, login_required
+
+from models import db, User, DownloadLog
+from auth import auth_bp
+from billing import billing_bp
+import jobs
+
+app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "app.db"
+)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db.init_app(app)
+
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
+login_manager.init_app(app)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(billing_bp)
+jobs.init_app(app)
+
+with app.app_context():
+    db.create_all()
+
+
+def user_is_unlimited():
+    return current_user.is_authenticated and current_user.is_subscribed
+
+
+@app.route("/")
+def index():
+    remaining = None
+    if not user_is_unlimited():
+        used = jobs.downloads_used_today(request.remote_addr)
+        remaining = max(0, jobs.FREE_DOWNLOADS_PER_DAY - used)
+    return render_template("index.html", remaining=remaining, limit=jobs.FREE_DOWNLOADS_PER_DAY)
+
+
+@app.route("/history")
+@login_required
+def history():
+    logs = (
+        DownloadLog.query.filter_by(user_id=current_user.id)
+        .order_by(DownloadLog.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    return render_template("history.html", logs=logs)
+
+
+@app.route("/api/info", methods=["POST"])
+def info():
+    url = request.json.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    try:
+        data = jobs.probe(url)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+    is_playlist = jobs.is_playlist_info(data)
+    result = {
+        "title": data.get("title"),
+        "thumbnail": data.get("thumbnail"),
+        "duration": data.get("duration"),
+        "uploader": data.get("uploader"),
+        "is_playlist": is_playlist,
+    }
+
+    if is_playlist:
+        result["total_items"] = data.get("playlist_count") or len(data.get("entries") or [])
+        result["qualities"] = ["Best", "720p", "480p", "Audio only (mp3)"]
+    else:
+        result["qualities"] = jobs.quality_options_for(data)
+
+    return jsonify(result)
+
+
+@app.route("/api/jobs", methods=["POST"])
+def api_create_job():
+    url = request.json.get("url", "").strip()
+    quality = request.json.get("quality", "Best")
+
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+
+    unlimited = user_is_unlimited()
+    user_id = current_user.id if current_user.is_authenticated else None
+
+    try:
+        job_id = jobs.create_job(url, quality, user_id, request.remote_addr, unlimited)
+    except jobs.JobError as e:
+        return jsonify({"error": e.message, "limit": e.limit}), e.status
+
+    return jsonify({"job_id": job_id}), 202
+
+
+@app.route("/api/jobs/<job_id>")
+def job_status(job_id):
+    job = jobs.get_job(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+
+    return jsonify({
+        "status": job["status"],
+        "kind": job["kind"],
+        "progress": job["progress"],
+        "current_item": job["current_item"],
+        "total_items": job["total_items"],
+        "current_item_title": job["current_item_title"],
+        "error": job["error"],
+        "files": [{"index": i, "title": f["title"]} for i, f in enumerate(job["files"])],
+    })
+
+
+@app.route("/api/jobs/<job_id>/download/<int:file_index>")
+def job_download(job_id, file_index):
+    job = jobs.get_job(job_id)
+    if not job or job["status"] != "finished":
+        return jsonify({"error": "Job not ready"}), 404
+
+    if file_index < 0 or file_index >= len(job["files"]):
+        return jsonify({"error": "File not found"}), 404
+
+    file_info = job["files"][file_index]
+    if not os.path.exists(file_info["path"]):
+        return jsonify({"error": "File no longer available"}), 404
+
+    title = file_info["title"] or "download"
+    safe_title = "".join(c for c in title if c.isalnum() or c in " -_").strip() or "download"
+    ext = os.path.splitext(file_info["path"])[1]
+
+    return send_file(file_info["path"], as_attachment=True, download_name=f"{safe_title}{ext}")
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5001)

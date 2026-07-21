@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Downloader</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<style>
+  .playlist-banner { display: none; }
+  #progressWrap { display: none; margin-top: 20px; }
+  #preview { display: none; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-inner">
+      <span class="brand">YouTube Downloader</span>
+      <span class="nav-links">
+        {% if current_user.is_authenticated %}
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="card">
+      <h1>Download any YouTube video</h1>
+      {% if remaining is not none %}
+        <p class="subtitle">
+          {{ remaining }} of {{ limit }} free downloads left today &middot; single videos, 10 min max.
+          <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">Subscribe for unlimited + playlists</a>
+        </p>
+      {% else %}
+        <p class="subtitle">Unlimited downloads and playlists &mdash; thanks for subscribing.</p>
+      {% endif %}
+
+      <input type="text" id="url" placeholder="Paste a YouTube URL here">
+
+      <div class="preview" id="preview">
+        <img id="thumb" src="" alt="">
+        <div>
+          <div class="meta-title" id="previewTitle"></div>
+          <div class="meta-sub" id="previewMeta"></div>
+        </div>
+      </div>
+
+      <div class="banner banner-warn playlist-banner" id="playlistBanner"></div>
+
+      <div class="row" style="margin-top: 16px;">
+        <select id="quality"></select>
+        <button id="downloadBtn">Download</button>
+      </div>
+
+      <div id="progressWrap">
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div id="progressLabel"></div>
+      </div>
+
+      <div id="status"></div>
+    </div>
+  </div>
+
+<script>
+const urlInput = document.getElementById("url");
+const statusEl = document.getElementById("status");
+const preview = document.getElementById("preview");
+const thumb = document.getElementById("thumb");
+const previewTitle = document.getElementById("previewTitle");
+const previewMeta = document.getElementById("previewMeta");
+const playlistBanner = document.getElementById("playlistBanner");
+const qualitySelect = document.getElementById("quality");
+const downloadBtn = document.getElementById("downloadBtn");
+const progressWrap = document.getElementById("progressWrap");
+const progressBar = document.getElementById("progressBar");
+const progressLabel = document.getElementById("progressLabel");
+
+const isAuthenticated = {{ "true" if current_user.is_authenticated else "false" }};
+const isSubscribed = {{ "true" if (current_user.is_authenticated and current_user.is_subscribed) else "false" }};
+
+let currentInfo = null;
+let infoRequestToken = 0;
+
+async function fetchInfo() {
+  const url = urlInput.value.trim();
+  if (!url) {
+    preview.style.display = "none";
+    playlistBanner.style.display = "none";
+    qualitySelect.innerHTML = "";
+    currentInfo = null;
+    return;
+  }
+
+  const token = ++infoRequestToken;
+  try {
+    const resp = await fetch("/api/info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await resp.json();
+    if (token !== infoRequestToken) return; // a newer request superseded this one
+
+    if (!resp.ok) {
+      preview.style.display = "none";
+      playlistBanner.style.display = "none";
+      qualitySelect.innerHTML = "";
+      currentInfo = null;
+      return;
+    }
+
+    currentInfo = data;
+
+    if (data.title) {
+      previewTitle.textContent = data.title;
+      previewMeta.textContent = data.is_playlist
+        ? `Playlist · ${data.total_items || "?"} videos`
+        : (data.uploader || "");
+      if (data.thumbnail) {
+        thumb.src = data.thumbnail;
+        thumb.style.display = "block";
+      } else {
+        thumb.style.display = "none";
+      }
+      preview.style.display = "flex";
+    } else {
+      preview.style.display = "none";
+    }
+
+    qualitySelect.innerHTML = "";
+    (data.qualities || ["Best"]).forEach((label) => {
+      const opt = document.createElement("option");
+      opt.value = label;
+      opt.textContent = label;
+      qualitySelect.appendChild(opt);
+    });
+
+    if (data.is_playlist && !isSubscribed) {
+      playlistBanner.innerHTML = isAuthenticated
+        ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
+        : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
+      playlistBanner.style.display = "block";
+      downloadBtn.disabled = true;
+    } else {
+      playlistBanner.style.display = "none";
+      downloadBtn.disabled = false;
+    }
+  } catch (e) {
+    // network hiccup while checking the URL; leave the form as-is
+  }
+}
+
+let debounceTimer = null;
+urlInput.addEventListener("input", () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(fetchInfo, 500);
+});
+urlInput.addEventListener("blur", fetchInfo);
+
+function triggerDownloads(jobId, files) {
+  files.forEach((f, i) => {
+    setTimeout(() => {
+      const a = document.createElement("a");
+      a.href = `/api/jobs/${jobId}/download/${f.index}`;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }, i * 400);
+  });
+}
+
+function pollJob(jobId) {
+  const interval = setInterval(async () => {
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}`);
+      const job = await resp.json();
+
+      if (!resp.ok) {
+        clearInterval(interval);
+        progressWrap.style.display = "none";
+        statusEl.classList.add("error");
+        statusEl.textContent = job.error || "Something went wrong.";
+        downloadBtn.disabled = false;
+        return;
+      }
+
+      progressBar.value = job.progress;
+      if (job.kind === "playlist") {
+        progressLabel.textContent = `Item ${job.current_item} of ${job.total_items}` +
+          (job.current_item_title ? `: ${job.current_item_title}` : "") + ` — ${job.progress}%`;
+      } else {
+        progressLabel.textContent = job.status === "postprocessing"
+          ? "Processing..."
+          : `${job.progress}%`;
+      }
+
+      if (job.status === "finished") {
+        clearInterval(interval);
+        progressWrap.style.display = "none";
+        statusEl.classList.remove("error");
+        statusEl.textContent = "Done!";
+        downloadBtn.disabled = false;
+        triggerDownloads(jobId, job.files);
+        setTimeout(() => window.location.reload(), 1500);
+      } else if (job.status === "error") {
+        clearInterval(interval);
+        progressWrap.style.display = "none";
+        statusEl.classList.add("error");
+        statusEl.textContent = job.error || "Download failed.";
+        downloadBtn.disabled = false;
+      }
+    } catch (e) {
+      // keep polling despite a transient network error
+    }
+  }, 1000);
+}
+
+downloadBtn.addEventListener("click", async () => {
+  const url = urlInput.value.trim();
+  const quality = qualitySelect.value || "Best";
+  if (!url) {
+    statusEl.textContent = "Please paste a URL.";
+    return;
+  }
+
+  statusEl.classList.remove("error");
+  statusEl.textContent = "Starting...";
+  downloadBtn.disabled = true;
+  progressWrap.style.display = "block";
+  progressBar.value = 0;
+  progressLabel.textContent = "";
+
+  try {
+    const resp = await fetch("/api/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, quality }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(data.error || "Could not start download");
+    }
+
+    statusEl.textContent = "";
+    pollJob(data.job_id);
+  } catch (e) {
+    progressWrap.style.display = "none";
+    statusEl.classList.add("error");
+    statusEl.textContent = e.message;
+    downloadBtn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

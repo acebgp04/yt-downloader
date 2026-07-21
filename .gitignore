@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+server.log
+.env
+app.db
+instance/
+bin/
+.claude/

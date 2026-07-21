@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account - YouTube Downloader</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="page page-narrow" style="padding-top: 80px;">
+    <div class="card">
+      <h1>Account</h1>
+      <p class="subtitle">{{ user.email }}</p>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% if not user.email_verified %}
+        <div class="banner banner-warn">
+          Your email isn't verified yet. Check your inbox for a verification link, or
+          <form method="POST" action="{{ url_for('auth.resend_verification') }}" style="display:inline">
+            <button type="submit" class="btn-link">resend it</button>
+          </form>.
+        </div>
+      {% endif %}
+
+      {% if user.is_subscribed %}
+        <div class="banner banner-success">You have an active unlimited subscription.</div>
+        <form method="POST" action="{{ url_for('billing.billing_portal') }}">
+          <button type="submit" class="btn-secondary btn-full">Manage billing</button>
+        </form>
+      {% else %}
+        <div class="banner banner-muted">
+          {% if request.args.get('canceled') %}
+            Checkout canceled. You're still on the free tier.
+          {% else %}
+            You're on the free tier &mdash; 3 downloads/day, 10 min max length, single videos only.
+          {% endif %}
+        </div>
+        {% if user.email_verified %}
+          <form method="POST" action="{{ url_for('billing.subscribe') }}">
+            <button type="submit" class="btn-full">Subscribe for unlimited downloads</button>
+          </form>
+        {% else %}
+          <p class="subtitle" style="margin-top:12px;">Verify your email above to subscribe.</p>
+        {% endif %}
+      {% endif %}
+
+      <div class="links-row">
+        <a href="{{ url_for('index') }}">Back to downloader</a>
+        <a href="{{ url_for('history') }}">Download history</a>
+        <a href="{{ url_for('auth.logout') }}">Log out</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

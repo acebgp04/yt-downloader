@@ -1,0 +1,11 @@
+# Copy to /etc/cloudflared/config.yml on the VM.
+# <TUNNEL_ID> and the credentials-file path are filled in automatically when
+# you run `cloudflared tunnel create yt-downloader` (see DEPLOY.md).
+
+tunnel: <TUNNEL_ID>
+credentials-file: /etc/cloudflared/<TUNNEL_ID>.json
+
+ingress:
+  - hostname: video.acetools.dev
+    service: http://127.0.0.1:5001
+  - service: http_status:404

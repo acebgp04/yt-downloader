@@ -4,3 +4,4 @@ flask-sqlalchemy
 flask-login
 stripe
 python-dotenv
+gunicorn

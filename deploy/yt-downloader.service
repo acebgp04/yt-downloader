@@ -1,0 +1,26 @@
+[Unit]
+Description=YouTube Downloader (Gunicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=ytdl
+Group=ytdl
+WorkingDirectory=/opt/yt-downloader
+EnvironmentFile=/opt/yt-downloader/.env
+ExecStart=/opt/yt-downloader/venv/bin/gunicorn \
+    --workers 1 \
+    --worker-class gthread \
+    --threads 8 \
+    --bind 127.0.0.1:5001 \
+    --timeout 3600 \
+    app:app
+Restart=on-failure
+RestartSec=5
+
+# Hardening (kept minimal since the app writes to its own directory and a temp dir)
+NoNewPrivileges=true
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

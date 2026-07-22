@@ -100,7 +100,7 @@ h1 {
   margin: 0 0 24px;
 }
 
-input[type=text], input[type=email], input[type=password], select {
+input[type=text], input[type=email], input[type=password], select, textarea {
   width: 100%;
   padding: 12px 14px;
   font-size: 1rem;
@@ -110,12 +110,13 @@ input[type=text], input[type=email], input[type=password], select {
   background: var(--surface);
   color: var(--text);
 }
-input:focus, select:focus {
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-ring);
 }
-input::placeholder { color: var(--text-muted); }
+input::placeholder, textarea::placeholder { color: var(--text-muted); }
 
 label {
   display: block;

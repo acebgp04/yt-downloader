@@ -39,3 +39,21 @@ def send_password_reset_email(user, token):
         f"Click to reset your password:\n\n{link}\n\nThis link expires in 1 hour. "
         f"If you didn't request this, you can ignore this email.",
     )
+
+
+def send_issue_report_email(report, reporter_email):
+    lines = [
+        f"From: {reporter_email}",
+        "",
+        report.description,
+    ]
+    if report.context_url or report.context_error or report.context_quality:
+        lines += ["", "--- Context ---"]
+        if report.context_url:
+            lines.append(f"URL: {report.context_url}")
+        if report.context_quality:
+            lines.append(f"Quality: {report.context_quality}")
+        if report.context_error:
+            lines.append(f"Error: {report.context_error}")
+
+    send_email(GMAIL_ADDRESS, "New issue report", "\n".join(lines))

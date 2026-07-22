@@ -35,3 +35,15 @@ class DownloadLog(db.Model):
     job_kind = db.Column(db.String(20))
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class IssueReport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    description = db.Column(db.Text, nullable=False)
+    context_url = db.Column(db.String(1000))
+    context_error = db.Column(db.Text)
+    context_quality = db.Column(db.String(50))
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))

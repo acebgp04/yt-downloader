@@ -17,9 +17,9 @@
       <span class="brand">YouTube Downloader</span>
       <span class="nav-links">
         {% if current_user.is_authenticated %}
-          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
         {% else %}
-          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a>
+          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a>
         {% endif %}
       </span>
     </div>
@@ -60,6 +60,7 @@
       </div>
 
       <div id="status"></div>
+      <div id="reportLink"></div>
     </div>
   </div>
 
@@ -76,6 +77,12 @@ const downloadBtn = document.getElementById("downloadBtn");
 const progressWrap = document.getElementById("progressWrap");
 const progressBar = document.getElementById("progressBar");
 const progressLabel = document.getElementById("progressLabel");
+const reportLink = document.getElementById("reportLink");
+
+function showReportLink(url, quality, error) {
+  const params = new URLSearchParams({ url: url || "", quality: quality || "", error: error || "" });
+  reportLink.innerHTML = `<a href="/report-issue?${params.toString()}">Report this issue</a>`;
+}
 
 const isAuthenticated = {{ "true" if current_user.is_authenticated else "false" }};
 const isSubscribed = {{ "true" if (current_user.is_authenticated and current_user.is_subscribed) else "false" }};
@@ -172,7 +179,7 @@ function triggerDownloads(jobId, files) {
   });
 }
 
-function pollJob(jobId) {
+function pollJob(jobId, sourceUrl, quality) {
   const interval = setInterval(async () => {
     try {
       const resp = await fetch(`/api/jobs/${jobId}`);
@@ -184,6 +191,7 @@ function pollJob(jobId) {
         statusEl.classList.add("error");
         statusEl.textContent = job.error || "Something went wrong.";
         downloadBtn.disabled = false;
+        showReportLink(sourceUrl, quality, job.error);
         return;
       }
 
@@ -211,6 +219,7 @@ function pollJob(jobId) {
         statusEl.classList.add("error");
         statusEl.textContent = job.error || "Download failed.";
         downloadBtn.disabled = false;
+        showReportLink(sourceUrl, quality, job.error);
       }
     } catch (e) {
       // keep polling despite a transient network error
@@ -228,6 +237,7 @@ downloadBtn.addEventListener("click", async () => {
 
   statusEl.classList.remove("error");
   statusEl.textContent = "Starting...";
+  reportLink.innerHTML = "";
   downloadBtn.disabled = true;
   progressWrap.style.display = "block";
   progressBar.value = 0;
@@ -242,16 +252,21 @@ downloadBtn.addEventListener("click", async () => {
     const data = await resp.json();
 
     if (!resp.ok) {
-      throw new Error(data.error || "Could not start download");
+      const err = new Error(data.error || "Could not start download");
+      err.isLimit = !!data.limit;
+      throw err;
     }
 
     statusEl.textContent = "";
-    pollJob(data.job_id);
+    pollJob(data.job_id, url, quality);
   } catch (e) {
     progressWrap.style.display = "none";
     statusEl.classList.add("error");
     statusEl.textContent = e.message;
     downloadBtn.disabled = false;
+    if (!e.isLimit) {
+      showReportLink(url, quality, e.message);
+    }
   }
 });
 </script>

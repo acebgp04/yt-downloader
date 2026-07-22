@@ -37,7 +37,7 @@
           {% if request.args.get('canceled') %}
             Checkout canceled. You're still on the free tier.
           {% else %}
-            You're on the free tier &mdash; 3 downloads/day, 10 min max length, single videos only.
+            You're on the free tier &mdash; {{ limit }} downloads/day, {{ max_minutes }} min max length, single videos only.
           {% endif %}
         </div>
         {% if user.email_verified %}

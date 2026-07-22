@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, jsonif
 from flask_login import login_required, current_user
 
 from models import db, User
+import jobs
 
 billing_bp = Blueprint("billing", __name__)
 
@@ -17,7 +18,12 @@ BASE_URL = os.environ.get("BASE_URL", "http://localhost:5001")
 @billing_bp.route("/account")
 @login_required
 def account():
-    return render_template("account.html", user=current_user)
+    return render_template(
+        "account.html",
+        user=current_user,
+        limit=jobs.FREE_DOWNLOADS_PER_DAY,
+        max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
+    )
 
 
 @billing_bp.route("/subscribe", methods=["POST"])

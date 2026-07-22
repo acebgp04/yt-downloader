@@ -30,7 +30,7 @@
       <h1>Download any YouTube video</h1>
       {% if remaining is not none %}
         <p class="subtitle">
-          {{ remaining }} of {{ limit }} free downloads left today &middot; single videos, 10 min max.
+          {{ remaining }} of {{ limit }} free downloads left today &middot; single videos, {{ max_minutes }} min max.
           <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">Subscribe for unlimited + playlists</a>
         </p>
       {% else %}

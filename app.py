@@ -53,7 +53,12 @@ def index():
     if not user_is_unlimited():
         used = jobs.downloads_used_today(request.remote_addr)
         remaining = max(0, jobs.FREE_DOWNLOADS_PER_DAY - used)
-    return render_template("index.html", remaining=remaining, limit=jobs.FREE_DOWNLOADS_PER_DAY)
+    return render_template(
+        "index.html",
+        remaining=remaining,
+        limit=jobs.FREE_DOWNLOADS_PER_DAY,
+        max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
+    )
 
 
 @app.route("/history")

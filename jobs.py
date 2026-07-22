@@ -8,8 +8,8 @@ import yt_dlp
 
 from models import db, DownloadLog
 
-FREE_DOWNLOADS_PER_DAY = 3
-FREE_MAX_DURATION_SECONDS = 10 * 60
+FREE_DOWNLOADS_PER_DAY = 5
+FREE_MAX_DURATION_SECONDS = 30 * 60
 JOB_TTL_SECONDS = 60 * 60
 
 DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), "yt-downloader")

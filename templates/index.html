@@ -3,7 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>YouTube Downloader</title>
+<title>YouTube Downloader &mdash; Download YouTube Videos &amp; MP3s Free</title>
+<meta name="description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install &mdash; paste a link and download instantly. Playlist support for subscribers.">
+<meta name="keywords" content="youtube downloader, youtube to mp3, youtube video downloader, download youtube videos, youtube to mp4, youtube playlist downloader">
+<link rel="canonical" href="{{ base_url }}/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="YouTube Downloader — Download YouTube Videos & MP3s Free">
+<meta property="og:description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install — paste a link and download instantly.">
+<meta property="og:url" content="{{ base_url }}/">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="YouTube Downloader — Download YouTube Videos & MP3s Free">
+<meta name="twitter:description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install — paste a link and download instantly.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "YouTube Downloader",
+  "url": "{{ base_url }}/",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "description": "Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install."
+}
+</script>
+
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <style>
   .playlist-banner { display: none; }
@@ -62,6 +92,29 @@
       <div id="status"></div>
       <div id="reportLink"></div>
     </div>
+
+    <section style="margin-top: 48px;">
+      <h2 style="font-size: 1.2rem; font-weight: 600;">How it works</h2>
+      <p class="subtitle">
+        Paste any YouTube video URL above and choose a format &mdash; MP4 video in the resolution
+        you want, or MP3 audio only. Click Download and the file starts processing right away,
+        with a live progress bar so you can see exactly how far along it is. No account, no
+        software installs, no browser extensions.
+      </p>
+
+      <h2 style="font-size: 1.2rem; font-weight: 600;">Video and audio downloads</h2>
+      <p class="subtitle">
+        Download YouTube videos as MP4 files in the best available quality, or extract just the
+        audio as an MP3. Free accounts get a handful of downloads per day at a generous length
+        limit &mdash; enough for the vast majority of single videos.
+      </p>
+
+      <h2 style="font-size: 1.2rem; font-weight: 600;">Playlist downloads</h2>
+      <p class="subtitle">
+        Subscribers can download entire YouTube playlists in one go, with no daily limit and no
+        length cap on individual videos.
+      </p>
+    </section>
   </div>
 
 <script>

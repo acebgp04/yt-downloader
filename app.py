@@ -42,6 +42,44 @@ jobs.init_app(app)
 with app.app_context():
     db.create_all()
 
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:5001")
+
+
+@app.context_processor
+def inject_base_url():
+    return {"base_url": BASE_URL}
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    lines = [
+        "User-agent: *",
+        "Allow: /$",
+        "Disallow: /account",
+        "Disallow: /history",
+        "Disallow: /report-issue",
+        "Disallow: /login",
+        "Disallow: /signup",
+        "Disallow: /forgot-password",
+        "Disallow: /reset-password",
+        "Disallow: /api/",
+        f"Sitemap: {BASE_URL}/sitemap.xml",
+    ]
+    return "\n".join(lines), 200, {"Content-Type": "text/plain"}
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{BASE_URL}/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>"""
+    return xml, 200, {"Content-Type": "application/xml"}
+
 
 def user_is_unlimited():
     return current_user.is_authenticated and current_user.is_subscribed

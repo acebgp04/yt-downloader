@@ -44,10 +44,16 @@ with app.app_context():
 
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5001")
 
+_style_css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "style.css")
+try:
+    ASSET_VERSION = str(int(os.path.getmtime(_style_css_path)))
+except OSError:
+    ASSET_VERSION = "1"
+
 
 @app.context_processor
 def inject_base_url():
-    return {"base_url": BASE_URL}
+    return {"base_url": BASE_URL, "asset_version": ASSET_VERSION}
 
 
 @app.route("/google338e2ecb0ee9220b.html")

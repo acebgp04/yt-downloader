@@ -12,10 +12,14 @@
 <meta property="og:title" content="YouTube Downloader — Download YouTube Videos & MP3s Free">
 <meta property="og:description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install — paste a link and download instantly.">
 <meta property="og:url" content="{{ base_url }}/">
+<meta property="og:image" content="{{ base_url }}/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 
-<meta name="twitter:card" content="summary">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="YouTube Downloader — Download YouTube Videos & MP3s Free">
 <meta name="twitter:description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install — paste a link and download instantly.">
+<meta name="twitter:image" content="{{ base_url }}/static/og-image.png">
 
 <script type="application/ld+json">
 {
@@ -23,6 +27,7 @@
   "@type": "WebApplication",
   "name": "YouTube Downloader",
   "url": "{{ base_url }}/",
+  "image": "{{ base_url }}/static/og-image.png",
   "applicationCategory": "MultimediaApplication",
   "operatingSystem": "Any",
   "offers": {
@@ -34,7 +39,7 @@
 }
 </script>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
 <style>
   .playlist-banner { display: none; }
   #progressWrap { display: none; margin-top: 20px; }

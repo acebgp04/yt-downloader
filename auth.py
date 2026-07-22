@@ -1,7 +1,10 @@
+import os
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from authlib.integrations.flask_client import OAuth
 
 from models import db, User
 from mailer import send_verification_email, send_password_reset_email
@@ -10,6 +13,19 @@ auth_bp = Blueprint("auth", __name__)
 
 EMAIL_VERIFY_MAX_AGE = 24 * 60 * 60
 PASSWORD_RESET_MAX_AGE = 60 * 60
+
+oauth = OAuth()
+
+
+def init_app(app):
+    oauth.init_app(app)
+    oauth.register(
+        name="google",
+        client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+        client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={"scope": "openid email profile"},
+    )
 
 
 def _serializer(salt):
@@ -62,7 +78,10 @@ def login():
         password = request.form.get("password", "")
 
         user = User.query.filter_by(email=email).first()
-        if not user or not check_password_hash(user.password_hash, password):
+        if not user or not user.password_hash:
+            flash("Invalid email or password.")
+            return redirect(url_for("auth.login"))
+        if not check_password_hash(user.password_hash, password):
             flash("Invalid email or password.")
             return redirect(url_for("auth.login"))
 
@@ -70,6 +89,46 @@ def login():
         return redirect(url_for("billing.account"))
 
     return render_template("login.html")
+
+
+@auth_bp.route("/auth/google/login")
+def google_login():
+    redirect_uri = url_for("auth.google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@auth_bp.route("/auth/google/callback")
+def google_callback():
+    token = oauth.google.authorize_access_token()
+    userinfo = token.get("userinfo") or {}
+    google_id = userinfo.get("sub")
+    email = (userinfo.get("email") or "").strip().lower()
+
+    if not google_id or not email:
+        flash("Google sign-in failed. Please try again.")
+        return redirect(url_for("auth.login"))
+
+    user = User.query.filter_by(google_id=google_id).first()
+    if not user:
+        user = User.query.filter_by(email=email).first()
+
+    if user:
+        if not user.google_id:
+            user.google_id = google_id
+        if userinfo.get("email_verified"):
+            user.email_verified = True
+        db.session.commit()
+    else:
+        user = User(
+            email=email,
+            google_id=google_id,
+            email_verified=bool(userinfo.get("email_verified")),
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    login_user(user)
+    return redirect(url_for("billing.account"))
 
 
 @auth_bp.route("/logout")

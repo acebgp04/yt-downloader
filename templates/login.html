@@ -15,6 +15,8 @@
           {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
         {% endif %}
       {% endwith %}
+      <a href="{{ url_for('auth.google_login') }}" class="btn btn-google btn-full">Sign in with Google</a>
+      <div class="divider">or</div>
       <form method="POST" class="stack">
         <input type="email" name="email" placeholder="Email" required>
         <input type="password" name="password" placeholder="Password" required>

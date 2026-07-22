@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify, send_file, render_template
 from flask_login import LoginManager, current_user, login_required
 
 from models import db, User, DownloadLog
+import auth
 from auth import auth_bp
 from billing import billing_bp
 from reports import reports_bp
@@ -35,6 +36,7 @@ def load_user(user_id):
 app.register_blueprint(auth_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(reports_bp)
+auth.init_app(app)
 jobs.init_app(app)
 
 with app.app_context():

@@ -5,3 +5,4 @@ flask-login
 stripe
 python-dotenv
 gunicorn
+authlib

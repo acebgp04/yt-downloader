@@ -50,6 +50,11 @@ def inject_base_url():
     return {"base_url": BASE_URL}
 
 
+@app.route("/google338e2ecb0ee9220b.html")
+def google_site_verification():
+    return "google-site-verification: google338e2ecb0ee9220b.html", 200, {"Content-Type": "text/html"}
+
+
 @app.route("/robots.txt")
 def robots_txt():
     lines = [

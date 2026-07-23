@@ -103,11 +103,25 @@ def user_is_unlimited():
     return current_user.is_authenticated and (current_user.is_subscribed or current_user.is_admin)
 
 
+def get_client_ip():
+    # The app is only reachable through the Cloudflare Tunnel (Gunicorn binds to
+    # 127.0.0.1 only), so CF-Connecting-IP is always set by Cloudflare's edge and
+    # can't be spoofed by a client bypassing the tunnel. Fall back to X-Forwarded-For
+    # / remote_addr for local/dev use where that header isn't present.
+    cf_ip = request.headers.get("CF-Connecting-IP")
+    if cf_ip:
+        return cf_ip
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.remote_addr
+
+
 @app.route("/")
 def index():
     remaining = None
     if not user_is_unlimited():
-        used = jobs.downloads_used_today(request.remote_addr)
+        used = jobs.downloads_used_today(get_client_ip())
         remaining = max(0, jobs.FREE_DOWNLOADS_PER_DAY - used)
     return render_template(
         "index.html",
@@ -182,7 +196,7 @@ def api_create_job():
     user_id = current_user.id if current_user.is_authenticated else None
 
     try:
-        job_id = jobs.create_job(url, quality, user_id, request.remote_addr, unlimited)
+        job_id = jobs.create_job(url, quality, user_id, get_client_ip(), unlimited)
     except jobs.JobError as e:
         return jsonify({"error": e.message, "limit": e.limit}), e.status
 

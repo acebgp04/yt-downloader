@@ -11,7 +11,7 @@ EnvironmentFile=/opt/yt-downloader/.env
 ExecStart=/opt/yt-downloader/venv/bin/gunicorn \
     --workers 1 \
     --worker-class gthread \
-    --threads 8 \
+    --threads 24 \
     --bind 127.0.0.1:5001 \
     --timeout 3600 \
     app:app

@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, jsonif
 from flask_login import login_required, current_user
 
 from models import db, User
+from mailer import send_new_subscriber_notification
 import jobs
 
 billing_bp = Blueprint("billing", __name__)
@@ -79,6 +80,7 @@ def stripe_webhook():
             user.stripe_subscription_id = getattr(obj, "subscription", None)
             user.subscription_status = "active"
             db.session.commit()
+            send_new_subscriber_notification(user)
 
     elif event_type == "customer.subscription.updated":
         user = User.query.filter_by(stripe_subscription_id=getattr(obj, "id", None)).first()

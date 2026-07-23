@@ -57,3 +57,20 @@ def send_issue_report_email(report, reporter_email):
             lines.append(f"Error: {report.context_error}")
 
     send_email(GMAIL_ADDRESS, "New issue report", "\n".join(lines))
+
+
+def send_new_user_notification(user):
+    method = "Google" if user.google_id else "email/password"
+    send_email(
+        GMAIL_ADDRESS,
+        "New user signup",
+        f"New account created: {user.email}\nMethod: {method}",
+    )
+
+
+def send_new_subscriber_notification(user):
+    send_email(
+        GMAIL_ADDRESS,
+        "New subscriber",
+        f"{user.email} just subscribed.\nStripe customer: {user.stripe_customer_id}",
+    )

@@ -7,7 +7,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from authlib.integrations.flask_client import OAuth
 
 from models import db, User
-from mailer import send_verification_email, send_password_reset_email
+from mailer import send_verification_email, send_password_reset_email, send_new_user_notification
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -63,6 +63,7 @@ def signup():
 
         token = generate_token(user.email, "email-verify")
         send_verification_email(user, token)
+        send_new_user_notification(user)
 
         login_user(user)
         flash("We've sent a verification link to your email.")
@@ -126,6 +127,7 @@ def google_callback():
         )
         db.session.add(user)
         db.session.commit()
+        send_new_user_notification(user)
 
     login_user(user)
     return redirect(url_for("billing.account"))

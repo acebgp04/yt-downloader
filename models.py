@@ -12,6 +12,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=True)
     google_id = db.Column(db.String(255), unique=True, nullable=True)
     email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
 
     stripe_customer_id = db.Column(db.String(255))
     stripe_subscription_id = db.Column(db.String(255))

@@ -376,6 +376,15 @@ function triggerDownloads(jobId, files) {
   });
 }
 
+let postprocessingStartedAt = null;
+
+function formatElapsed(ms) {
+  const totalSeconds = Math.round(ms / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
 function pollJob(jobId, sourceUrl, quality) {
   const interval = setInterval(async () => {
     try {
@@ -397,10 +406,16 @@ function pollJob(jobId, sourceUrl, quality) {
       if (job.kind === "playlist") {
         progressLabel.textContent = `Item ${job.current_item} of ${job.total_items}` +
           (job.current_item_title ? `: ${job.current_item_title}` : "") + ` — ${job.progress}%`;
+        progressBar.classList.remove("progress-pulse");
+      } else if (job.status === "postprocessing") {
+        if (!postprocessingStartedAt) postprocessingStartedAt = Date.now();
+        const elapsed = formatElapsed(Date.now() - postprocessingStartedAt);
+        progressLabel.textContent = `Converting your file... this can take a few minutes for long videos (${elapsed} elapsed)`;
+        progressBar.classList.add("progress-pulse");
       } else {
-        progressLabel.textContent = job.status === "postprocessing"
-          ? "Processing..."
-          : `${job.progress}%`;
+        postprocessingStartedAt = null;
+        progressBar.classList.remove("progress-pulse");
+        progressLabel.textContent = `${job.progress}%`;
       }
 
       if (job.status === "finished") {
@@ -438,6 +453,8 @@ downloadBtn.addEventListener("click", async () => {
   actionArea.style.display = "none";
   progressWrap.style.display = "block";
   progressBar.value = 0;
+  progressBar.classList.remove("progress-pulse");
+  postprocessingStartedAt = null;
   progressLabel.textContent = "Starting...";
 
   try {

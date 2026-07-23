@@ -360,6 +360,13 @@ progress::-webkit-progress-bar { background: var(--border); border-radius: 999px
 progress::-webkit-progress-value { background: linear-gradient(90deg, var(--accent-2), var(--accent)); border-radius: 999px; }
 progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 
+@keyframes progress-pulse-anim {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.progress-pulse::-webkit-progress-value { animation: progress-pulse-anim 1.2s ease-in-out infinite; }
+.progress-pulse::-moz-progress-bar { animation: progress-pulse-anim 1.2s ease-in-out infinite; }
+
 #progressLabel, .progress-label {
   font-size: 0.83rem;
   color: var(--text-muted);

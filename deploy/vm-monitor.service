@@ -1,0 +1,7 @@
+[Unit]
+Description=VM resource health check
+
+[Service]
+Type=oneshot
+User=ytdl
+ExecStart=/usr/bin/python3 /opt/vm-monitor/vm_monitor.py

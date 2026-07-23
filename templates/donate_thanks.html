@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+<meta name="robots" content="noindex, follow">
+<title>Thank you - YouTube Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
+    </div>
+  </div>
+
+  <div class="page page-narrow" style="padding-top: 96px;">
+    <div class="card" style="text-align: center;">
+      <div class="done-panel" style="justify-content: center; margin: 0 0 20px;">
+        <div class="check">&#10003;</div>
+      </div>
+      <h1>Thank you!</h1>
+      <p class="subtitle">Your support means a lot &mdash; it genuinely helps keep this project running.</p>
+      <div class="links-row" style="justify-content: center;">
+        <a href="{{ url_for('index') }}">Back to downloader</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

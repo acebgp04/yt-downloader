@@ -37,6 +37,7 @@
         <div class="stat-tile"><div class="value">{{ active_subscribers }}</div><div class="label">Active subscribers</div></div>
         <div class="stat-tile"><div class="value">{{ downloads_today }}</div><div class="label">Downloads today</div></div>
         <div class="stat-tile"><div class="value">{{ downloads_total }}</div><div class="label">Downloads all-time</div></div>
+        <div class="stat-tile"><div class="value">{{ donation_totals_display | join(", ") if donation_totals_display else "$0" }}</div><div class="label">Donations received</div></div>
       </div>
 
       <div class="section-title">Recent signups</div>
@@ -91,6 +92,22 @@
         </table>
       {% else %}
         <p class="empty-state">No reports yet.</p>
+      {% endif %}
+
+      <div class="section-title">Recent donations</div>
+      {% if recent_donations %}
+        <table>
+          <tr><th>Amount</th><th>Donor email</th><th>Date</th></tr>
+          {% for d in recent_donations %}
+            <tr>
+              <td>${{ "%.2f"|format(d.amount_cents / 100) }} {{ d.currency }}</td>
+              <td>{{ d.donor_email or "-" }}</td>
+              <td>{{ d.created_at.strftime("%Y-%m-%d %H:%M") }} UTC</td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <p class="empty-state">No donations yet.</p>
       {% endif %}
 
       <div class="links-row">

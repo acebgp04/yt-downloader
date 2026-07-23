@@ -2,8 +2,9 @@ from functools import wraps
 
 from flask import Blueprint, render_template, abort
 from flask_login import login_required, current_user
+from sqlalchemy import func
 
-from models import db, User, DownloadLog, IssueReport
+from models import db, User, DownloadLog, IssueReport, Donation
 import jobs
 
 admin_bp = Blueprint("admin", __name__)
@@ -46,6 +47,14 @@ def dashboard():
         .all()
     )
 
+    donation_totals = (
+        db.session.query(Donation.currency, func.sum(Donation.amount_cents))
+        .group_by(Donation.currency)
+        .all()
+    )
+    donation_totals_display = [f"${cents / 100:.2f} {currency}" for currency, cents in donation_totals]
+    recent_donations = Donation.query.order_by(Donation.created_at.desc()).limit(20).all()
+
     return render_template(
         "admin.html",
         total_users=total_users,
@@ -56,4 +65,6 @@ def dashboard():
         recent_users=recent_users,
         recent_downloads=recent_downloads,
         recent_reports=recent_reports,
+        donation_totals_display=donation_totals_display,
+        recent_donations=recent_donations,
     )

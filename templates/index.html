@@ -62,9 +62,9 @@
       <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
       <span class="nav-links">
         {% if current_user.is_authenticated %}
-          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
         {% else %}
-          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a>
+          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a>
         {% endif %}
       </span>
     </div>
@@ -129,6 +129,7 @@
       {% if remaining is not none %}
         <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} free downloads left today &middot; {{ max_minutes }} min max &middot;
         <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get unlimited + playlists</a>
+        &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
       {% else %}
         Unlimited downloads and playlists &mdash; thanks for subscribing.
       {% endif %}

@@ -75,3 +75,11 @@ def send_new_subscriber_notification(user):
         "New subscriber",
         f"{user.email} just subscribed.\nStripe customer: {user.stripe_customer_id}",
     )
+
+
+def send_donation_notification(amount_display, donor_email):
+    send_email(
+        GMAIL_ADDRESS,
+        "New donation",
+        f"Someone just donated {amount_display}.\nDonor email: {donor_email or 'not provided'}",
+    )

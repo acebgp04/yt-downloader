@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+<meta name="robots" content="noindex, follow">
+<title>Donate - YouTube Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
+      <span class="nav-links">
+        {% if current_user.is_authenticated %}
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="page page-narrow" style="padding-top: 80px;">
+    <div class="card">
+      <h1>Support this project<span class="accent-dot">.</span></h1>
+      <p class="subtitle">
+        This tool is free to use. If it's been useful to you, a small donation helps cover
+        server and processing costs &mdash; totally optional, any amount is appreciated.
+      </p>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" class="stack">
+        <div>
+          <label for="amount">Amount (CAD)</label>
+          <input type="number" id="amount" name="amount" step="0.01" min="1" max="500" placeholder="5.00" required>
+        </div>
+        <button type="submit" class="btn-full">Donate</button>
+      </form>
+
+      <div class="links-row">
+        <a href="{{ url_for('index') }}">Back to downloader</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

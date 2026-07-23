@@ -5,8 +5,8 @@ import stripe
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
 from flask_login import login_required, current_user
 
-from models import db, User
-from mailer import send_new_subscriber_notification
+from models import db, User, Donation
+from mailer import send_new_subscriber_notification, send_donation_notification
 import jobs
 
 billing_bp = Blueprint("billing", __name__)
@@ -101,7 +101,29 @@ def stripe_webhook():
     event_type = event["type"]
     obj = event["data"]["object"]
 
-    if event_type == "checkout.session.completed":
+    if event_type == "checkout.session.completed" and getattr(obj, "mode", None) == "payment":
+        session_id = getattr(obj, "id", None)
+        if session_id and not Donation.query.filter_by(stripe_checkout_session_id=session_id).first():
+            user_id = getattr(obj, "client_reference_id", None)
+            amount_total = getattr(obj, "amount_total", 0) or 0
+            currency = (getattr(obj, "currency", None) or "cad").upper()
+            customer_details = getattr(obj, "customer_details", None)
+            donor_email = getattr(customer_details, "email", None) if customer_details else None
+
+            donation = Donation(
+                user_id=int(user_id) if user_id else None,
+                amount_cents=amount_total,
+                currency=currency,
+                donor_email=donor_email,
+                stripe_checkout_session_id=session_id,
+            )
+            db.session.add(donation)
+            db.session.commit()
+
+            amount_display = f"${amount_total / 100:.2f} {currency}"
+            send_donation_notification(amount_display, donor_email)
+
+    elif event_type == "checkout.session.completed" and getattr(obj, "mode", None) == "subscription":
         user_id = getattr(obj, "client_reference_id", None)
         user = User.query.get(int(user_id)) if user_id else None
         if user:

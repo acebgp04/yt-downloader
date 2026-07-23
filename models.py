@@ -39,6 +39,18 @@ class DownloadLog(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Donation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+
+    amount_cents = db.Column(db.Integer, nullable=False)
+    currency = db.Column(db.String(10), nullable=False)
+    donor_email = db.Column(db.String(255))
+    stripe_checkout_session_id = db.Column(db.String(255), unique=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class IssueReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

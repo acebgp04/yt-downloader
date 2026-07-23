@@ -13,6 +13,7 @@ from auth import auth_bp
 from billing import billing_bp
 from reports import reports_bp
 from admin import admin_bp
+from donations import donations_bp
 import jobs
 
 app = Flask(__name__)
@@ -38,6 +39,7 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(billing_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(donations_bp)
 auth.init_app(app)
 jobs.init_app(app)
 

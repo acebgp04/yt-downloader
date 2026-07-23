@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, request, jsonify, send_file, render_template
+from flask import Flask, request, jsonify, send_file, render_template, redirect, url_for
 from flask_login import LoginManager, current_user, login_required
 
 from models import db, User, DownloadLog
@@ -61,6 +61,11 @@ def inject_base_url():
 @app.route("/google338e2ecb0ee9220b.html")
 def google_site_verification():
     return "google-site-verification: google338e2ecb0ee9220b.html", 200, {"Content-Type": "text/html"}
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return redirect(url_for("static", filename="favicon.ico"))
 
 
 @app.route("/robots.txt")

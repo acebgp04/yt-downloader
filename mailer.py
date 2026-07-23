@@ -44,6 +44,7 @@ def send_password_reset_email(user, token):
 def send_issue_report_email(report, reporter_email):
     lines = [
         f"From: {reporter_email}",
+        f"Type: {report.issue_type or 'other'}",
         "",
         report.description,
     ]

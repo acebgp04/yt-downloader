@@ -39,17 +39,23 @@
 }
 </script>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
 <style>
-  .playlist-banner { display: none; }
-  #progressWrap { display: none; margin-top: 20px; }
-  #preview { display: none; }
+  .hero { text-align: center; }
+  .tool-card { max-width: 680px; margin: 26px auto 0; text-align: left; }
+  #revealPanel { display: none; }
+  #limitBanner { display: none; }
+  #progressWrap { display: none; margin-top: 16px; }
+  #donePanel { display: none; }
 </style>
 </head>
 <body>
   <div class="nav">
     <div class="nav-inner">
-      <span class="brand">YouTube Downloader</span>
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
       <span class="nav-links">
         {% if current_user.is_authenticated %}
           {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
@@ -60,45 +66,94 @@
     </div>
   </div>
 
-  <div class="page">
-    <div class="card">
-      <h1>Download any YouTube video</h1>
-      {% if remaining is not none %}
-        <p class="subtitle">
-          {{ remaining }} of {{ limit }} free downloads left today &middot; single videos, {{ max_minutes }} min max.
-          <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">Subscribe for unlimited + playlists</a>
-        </p>
-      {% else %}
-        <p class="subtitle">Unlimited downloads and playlists &mdash; thanks for subscribing.</p>
-      {% endif %}
+  <div class="page page-wide hero">
+    <div class="badge-pill"><span class="dot"></span>No installs &middot; no ads &middot; files deleted after download</div>
+    <h1>Download any YouTube video<span class="accent-dot">.</span></h1>
+    <p class="subtitle">Paste a link, pick MP4 or MP3, and it starts instantly with a live progress bar.</p>
 
-      <input type="text" id="url" placeholder="Paste a YouTube URL here">
+    <div class="card tool-card">
+      <div class="row" id="urlRow">
+        <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
+        <button id="continueBtn">Continue</button>
+      </div>
 
-      <div class="preview" id="preview">
-        <img id="thumb" src="" alt="">
-        <div>
-          <div class="meta-title" id="previewTitle"></div>
-          <div class="meta-sub" id="previewMeta"></div>
+      <div id="revealPanel">
+        <div class="preview" id="preview">
+          <div class="thumb-wrap">
+            <img id="thumb" src="" alt="">
+            <span class="duration-badge" id="durationBadge"></span>
+          </div>
+          <div>
+            <div class="meta-title" id="previewTitle"></div>
+            <div class="meta-sub" id="previewMeta"></div>
+          </div>
         </div>
-      </div>
 
-      <div class="banner banner-warn playlist-banner" id="playlistBanner"></div>
+        <div class="banner banner-warn" id="limitBanner"></div>
 
-      <div class="row" style="margin-top: 16px;">
-        <select id="quality"></select>
-        <button id="downloadBtn">Download</button>
-      </div>
+        <div class="tabs" id="formatTabs">
+          <button type="button" class="tab active" id="tabMp4">MP4 &middot; Video</button>
+          <button type="button" class="tab" id="tabMp3">MP3 &middot; Audio</button>
+        </div>
 
-      <div id="progressWrap">
-        <progress id="progressBar" value="0" max="100"></progress>
-        <div id="progressLabel"></div>
+        <div class="chips" id="qualityChips"></div>
+
+        <div id="actionArea" style="margin-top: 16px;">
+          <button id="downloadBtn" class="btn-full">Download <span id="downloadLabel"></span></button>
+        </div>
+
+        <div id="progressWrap">
+          <progress id="progressBar" value="0" max="100"></progress>
+          <div id="progressLabel"></div>
+        </div>
+
+        <div class="done-panel" id="donePanel">
+          <div class="check">&#10003;</div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="title">Your file is ready</div>
+            <div class="filename" id="doneFilename"></div>
+          </div>
+          <button type="button" id="downloadAnotherBtn" class="btn-secondary">Download another</button>
+        </div>
       </div>
 
       <div id="status"></div>
       <div id="reportLink"></div>
     </div>
 
-    <section style="margin-top: 48px;">
+    <div class="subtitle" style="margin-top: 14px;">
+      {% if remaining is not none %}
+        <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} free downloads left today &middot; {{ max_minutes }} min max &middot;
+        <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get unlimited + playlists</a>
+      {% else %}
+        Unlimited downloads and playlists &mdash; thanks for subscribing.
+      {% endif %}
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-tile">
+        <div class="mark">&raquo;</div>
+        <div class="title">Instant start</div>
+        <div class="desc">Processing begins the moment you hit download &mdash; watch it live.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="mark">&#9686;</div>
+        <div class="title">Nothing kept</div>
+        <div class="desc">Files are deleted shortly after you download them &mdash; nothing kept longer than necessary.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="mark">&#8709;</div>
+        <div class="title">No ads, no installs</div>
+        <div class="desc">No extensions, no pop-ups, no software. Just a link and a button.</div>
+      </div>
+      <div class="feature-tile">
+        <div class="mark">&equiv;</div>
+        <div class="title">Playlist power</div>
+        <div class="desc">Subscribers grab entire playlists in one click, no length caps.</div>
+      </div>
+    </div>
+
+    <section style="margin-top: 48px; text-align: left;">
       <h2 style="font-size: 1.2rem; font-weight: 600;">How it works</h2>
       <p class="subtitle">
         Paste any YouTube video URL above and choose a format &mdash; MP4 video in the resolution
@@ -124,41 +179,120 @@
 
 <script>
 const urlInput = document.getElementById("url");
+const continueBtn = document.getElementById("continueBtn");
 const statusEl = document.getElementById("status");
+const revealPanel = document.getElementById("revealPanel");
 const preview = document.getElementById("preview");
 const thumb = document.getElementById("thumb");
+const durationBadge = document.getElementById("durationBadge");
 const previewTitle = document.getElementById("previewTitle");
 const previewMeta = document.getElementById("previewMeta");
-const playlistBanner = document.getElementById("playlistBanner");
-const qualitySelect = document.getElementById("quality");
+const limitBanner = document.getElementById("limitBanner");
+const tabMp4 = document.getElementById("tabMp4");
+const tabMp3 = document.getElementById("tabMp3");
+const qualityChips = document.getElementById("qualityChips");
+const actionArea = document.getElementById("actionArea");
 const downloadBtn = document.getElementById("downloadBtn");
+const downloadLabel = document.getElementById("downloadLabel");
 const progressWrap = document.getElementById("progressWrap");
 const progressBar = document.getElementById("progressBar");
 const progressLabel = document.getElementById("progressLabel");
+const donePanel = document.getElementById("donePanel");
+const doneFilename = document.getElementById("doneFilename");
+const downloadAnotherBtn = document.getElementById("downloadAnotherBtn");
 const reportLink = document.getElementById("reportLink");
+
+const isAuthenticated = {{ "true" if current_user.is_authenticated else "false" }};
+const isSubscribed = {{ "true" if (current_user.is_authenticated and current_user.is_subscribed) else "false" }};
+
+let currentInfo = null;
+let videoQualities = [];
+let selectedFormat = "mp4";
+let selectedQuality = null;
+let blockedReason = null; // "playlist" | "duration" | null
+
+function formatDuration(seconds) {
+  if (!seconds) return "";
+  seconds = Math.round(seconds);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function renderChips() {
+  qualityChips.innerHTML = "";
+  const list = selectedFormat === "mp3"
+    ? [{ label: "Audio only (mp3)", size: (currentInfo.qualities.find(q => q.label === "Audio only (mp3)") || {}).size, display: "192 kbps" }]
+    : videoQualities.map(q => ({ ...q, display: q.label }));
+
+  list.forEach((q) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (q.label === selectedQuality ? " active" : "");
+    chip.innerHTML = `<span>${q.display}</span>` + (q.size ? `<span class="chip-size">${q.size}</span>` : "");
+    chip.addEventListener("click", () => {
+      selectedQuality = q.label;
+      renderChips();
+      updateDownloadLabel();
+    });
+    qualityChips.appendChild(chip);
+  });
+
+  if (!list.find(q => q.label === selectedQuality) && list.length) {
+    selectedQuality = list[0].label;
+    renderChips();
+  }
+}
+
+function updateDownloadLabel() {
+  downloadLabel.textContent = selectedFormat === "mp3" ? "(192 kbps MP3)" : `(${selectedQuality})`;
+}
+
+function selectTab(format) {
+  selectedFormat = format;
+  tabMp4.classList.toggle("active", format === "mp4");
+  tabMp3.classList.toggle("active", format === "mp3");
+  selectedQuality = null;
+  renderChips();
+  updateDownloadLabel();
+}
+
+tabMp4.addEventListener("click", () => selectTab("mp4"));
+tabMp3.addEventListener("click", () => selectTab("mp3"));
+
+function resetForm() {
+  urlInput.value = "";
+  revealPanel.style.display = "none";
+  donePanel.style.display = "none";
+  progressWrap.style.display = "none";
+  actionArea.style.display = "block";
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+  reportLink.innerHTML = "";
+  continueBtn.disabled = false;
+  urlInput.focus();
+}
+
+downloadAnotherBtn.addEventListener("click", resetForm);
 
 function showReportLink(url, quality, error) {
   const params = new URLSearchParams({ url: url || "", quality: quality || "", error: error || "" });
   reportLink.innerHTML = `<a href="/report-issue?${params.toString()}">Report this issue</a>`;
 }
 
-const isAuthenticated = {{ "true" if current_user.is_authenticated else "false" }};
-const isSubscribed = {{ "true" if (current_user.is_authenticated and current_user.is_subscribed) else "false" }};
-
-let currentInfo = null;
-let infoRequestToken = 0;
-
-async function fetchInfo() {
+async function handleContinue() {
   const url = urlInput.value.trim();
   if (!url) {
-    preview.style.display = "none";
-    playlistBanner.style.display = "none";
-    qualitySelect.innerHTML = "";
-    currentInfo = null;
+    statusEl.textContent = "Please paste a URL.";
     return;
   }
 
-  const token = ++infoRequestToken;
+  statusEl.classList.remove("error");
+  statusEl.textContent = "Looking up video...";
+  continueBtn.disabled = true;
+
   try {
     const resp = await fetch("/api/info", {
       method: "POST",
@@ -166,63 +300,68 @@ async function fetchInfo() {
       body: JSON.stringify({ url }),
     });
     const data = await resp.json();
-    if (token !== infoRequestToken) return; // a newer request superseded this one
 
     if (!resp.ok) {
-      preview.style.display = "none";
-      playlistBanner.style.display = "none";
-      qualitySelect.innerHTML = "";
-      currentInfo = null;
-      return;
+      throw new Error(data.error || "Could not look up that URL");
     }
 
     currentInfo = data;
+    statusEl.textContent = "";
 
-    if (data.title) {
-      previewTitle.textContent = data.title;
-      previewMeta.textContent = data.is_playlist
-        ? `Playlist · ${data.total_items || "?"} videos`
-        : (data.uploader || "");
-      if (data.thumbnail) {
-        thumb.src = data.thumbnail;
-        thumb.style.display = "block";
-      } else {
-        thumb.style.display = "none";
-      }
+    previewTitle.textContent = data.title || "";
+    previewMeta.textContent = data.is_playlist
+      ? `Playlist · ${data.total_items || "?"} videos`
+      : (data.uploader || "");
+    if (data.thumbnail) {
+      thumb.src = data.thumbnail;
       preview.style.display = "flex";
     } else {
       preview.style.display = "none";
     }
+    durationBadge.textContent = data.is_playlist ? "" : formatDuration(data.duration);
+    durationBadge.style.display = data.is_playlist ? "none" : "block";
 
-    qualitySelect.innerHTML = "";
-    (data.qualities || ["Best"]).forEach((label) => {
-      const opt = document.createElement("option");
-      opt.value = label;
-      opt.textContent = label;
-      qualitySelect.appendChild(opt);
-    });
+    videoQualities = (data.qualities || []).filter(q => q.label !== "Audio only (mp3)");
+    selectedFormat = "mp4";
+    tabMp4.classList.add("active");
+    tabMp3.classList.remove("active");
+    selectedQuality = null;
+    renderChips();
+    updateDownloadLabel();
 
     if (data.is_playlist && !isSubscribed) {
-      playlistBanner.innerHTML = isAuthenticated
+      blockedReason = "playlist";
+      limitBanner.innerHTML = isAuthenticated
         ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
         : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
-      playlistBanner.style.display = "block";
-      downloadBtn.disabled = true;
+      limitBanner.style.display = "block";
+      actionArea.style.display = "none";
+    } else if (data.over_duration_limit) {
+      blockedReason = "duration";
+      limitBanner.innerHTML = isAuthenticated
+        ? 'This video is too long for the free tier. <a href="/account">Subscribe for unlimited length</a>.'
+        : 'This video is too long for the free tier. <a href="/signup">Sign up to subscribe</a>.';
+      limitBanner.style.display = "block";
+      actionArea.style.display = "none";
     } else {
-      playlistBanner.style.display = "none";
-      downloadBtn.disabled = false;
+      blockedReason = null;
+      limitBanner.style.display = "none";
+      actionArea.style.display = "block";
     }
+
+    revealPanel.style.display = "block";
   } catch (e) {
-    // network hiccup while checking the URL; leave the form as-is
+    statusEl.classList.add("error");
+    statusEl.textContent = e.message;
+  } finally {
+    continueBtn.disabled = false;
   }
 }
 
-let debounceTimer = null;
-urlInput.addEventListener("input", () => {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(fetchInfo, 500);
+continueBtn.addEventListener("click", handleContinue);
+urlInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleContinue();
 });
-urlInput.addEventListener("blur", fetchInfo);
 
 function triggerDownloads(jobId, files) {
   files.forEach((f, i) => {
@@ -246,6 +385,7 @@ function pollJob(jobId, sourceUrl, quality) {
       if (!resp.ok) {
         clearInterval(interval);
         progressWrap.style.display = "none";
+        actionArea.style.display = "block";
         statusEl.classList.add("error");
         statusEl.textContent = job.error || "Something went wrong.";
         downloadBtn.disabled = false;
@@ -266,14 +406,15 @@ function pollJob(jobId, sourceUrl, quality) {
       if (job.status === "finished") {
         clearInterval(interval);
         progressWrap.style.display = "none";
-        statusEl.classList.remove("error");
-        statusEl.textContent = "Done!";
-        downloadBtn.disabled = false;
+        statusEl.textContent = "";
         triggerDownloads(jobId, job.files);
-        setTimeout(() => window.location.reload(), 1500);
+        const names = job.files.map(f => f.title).join(", ");
+        doneFilename.textContent = names;
+        donePanel.style.display = "flex";
       } else if (job.status === "error") {
         clearInterval(interval);
         progressWrap.style.display = "none";
+        actionArea.style.display = "block";
         statusEl.classList.add("error");
         statusEl.textContent = job.error || "Download failed.";
         downloadBtn.disabled = false;
@@ -287,19 +428,17 @@ function pollJob(jobId, sourceUrl, quality) {
 
 downloadBtn.addEventListener("click", async () => {
   const url = urlInput.value.trim();
-  const quality = qualitySelect.value || "Best";
-  if (!url) {
-    statusEl.textContent = "Please paste a URL.";
-    return;
-  }
+  const quality = selectedQuality || "Best";
+  if (!url || blockedReason) return;
 
   statusEl.classList.remove("error");
-  statusEl.textContent = "Starting...";
+  statusEl.textContent = "";
   reportLink.innerHTML = "";
   downloadBtn.disabled = true;
+  actionArea.style.display = "none";
   progressWrap.style.display = "block";
   progressBar.value = 0;
-  progressLabel.textContent = "";
+  progressLabel.textContent = "Starting...";
 
   try {
     const resp = await fetch("/api/jobs", {
@@ -315,10 +454,10 @@ downloadBtn.addEventListener("click", async () => {
       throw err;
     }
 
-    statusEl.textContent = "";
     pollJob(data.job_id, url, quality);
   } catch (e) {
     progressWrap.style.display = "none";
+    actionArea.style.display = "block";
     statusEl.classList.add("error");
     statusEl.textContent = e.message;
     downloadBtn.disabled = false;

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, follow">
 <title>Report an issue - YouTube Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
 </head>
 <body>
@@ -31,12 +34,34 @@
         <input type="hidden" name="context_url" value="{{ context_url }}">
         <input type="hidden" name="context_quality" value="{{ context_quality }}">
         <input type="hidden" name="context_error" value="{{ context_error }}">
+        <input type="hidden" name="issue_type" id="issueTypeInput" value="{{ issue_types[0].value }}">
+
         <div>
-          <label for="description">What happened?</label>
-          <textarea id="description" name="description" rows="6" required></textarea>
+          <label>What went wrong?</label>
+          <div class="chips" id="issueChips">
+            {% for t in issue_types %}
+              <button type="button" class="chip{{ ' active' if loop.first else '' }}" data-value="{{ t.value }}">{{ t.label }}</button>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div>
+          <label for="description">Details</label>
+          <textarea id="description" name="description" rows="6" required placeholder="Describe what happened..."></textarea>
         </div>
         <button type="submit" class="btn-full">Send report</button>
       </form>
+
+      <script>
+        const issueTypeInput = document.getElementById("issueTypeInput");
+        document.querySelectorAll("#issueChips .chip").forEach((chip) => {
+          chip.addEventListener("click", () => {
+            document.querySelectorAll("#issueChips .chip").forEach((c) => c.classList.remove("active"));
+            chip.classList.add("active");
+            issueTypeInput.value = chip.dataset.value;
+          });
+        });
+      </script>
 
       <div class="links-row">
         <a href="{{ url_for('index') }}">Back to downloader</a>

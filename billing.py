@@ -1,4 +1,5 @@
 import os
+import time
 
 import stripe
 from flask import Blueprint, render_template, redirect, url_for, request, jsonify, flash
@@ -15,6 +16,33 @@ STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET")
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5001")
 
+PRICE_CACHE_TTL = 3600
+_price_cache = {"value": None, "fetched_at": 0}
+
+
+def get_price_display():
+    now = time.time()
+    if _price_cache["value"] and (now - _price_cache["fetched_at"]) < PRICE_CACHE_TTL:
+        return _price_cache["value"]
+
+    try:
+        price = stripe.Price.retrieve(STRIPE_PRICE_ID)
+        amount = price["unit_amount"] / 100
+        currency = price["currency"].upper()
+        recurring = price["recurring"]
+        interval = recurring["interval"] if recurring else "week"
+        interval_count = recurring["interval_count"] if recurring else 1
+
+        amount_str = f"${amount:.2f}" + ("" if currency == "USD" else f" {currency}")
+        period_str = f"/ {interval}" if interval_count == 1 else f"/ {interval_count} {interval}s"
+
+        result = {"amount": amount_str, "period": period_str}
+        _price_cache["value"] = result
+        _price_cache["fetched_at"] = now
+        return result
+    except Exception:
+        return _price_cache["value"] or {"amount": "", "period": ""}
+
 
 @billing_bp.route("/account")
 @login_required
@@ -24,6 +52,7 @@ def account():
         user=current_user,
         limit=jobs.FREE_DOWNLOADS_PER_DAY,
         max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
+        price=get_price_display(),
     )
 
 

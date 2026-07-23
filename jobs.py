@@ -77,15 +77,54 @@ def is_playlist_info(info):
     return info.get("_type") == "playlist"
 
 
+def _format_size(num_bytes):
+    if not num_bytes:
+        return None
+    mb = num_bytes / (1024 * 1024)
+    return f"~{mb:.0f} MB"
+
+
+def _filesize(fmt):
+    return fmt.get("filesize") or fmt.get("filesize_approx")
+
+
 def quality_options_for(info):
     formats = info.get("formats") or []
-    heights = {f.get("height") for f in formats if f.get("vcodec") not in (None, "none") and f.get("height")}
-    labels = ["Best"]
+    video_formats = [f for f in formats if f.get("vcodec") not in (None, "none") and f.get("height")]
+    audio_formats = [f for f in formats if f.get("vcodec") in (None, "none") and f.get("acodec") not in (None, "none")]
+
+    heights = {f["height"] for f in video_formats}
+
+    best_audio_size = None
+    for f in audio_formats:
+        sz = _filesize(f)
+        if sz and (best_audio_size is None or sz > best_audio_size):
+            best_audio_size = sz
+
+    def video_plus_audio_size(vf):
+        sz = _filesize(vf)
+        if sz and best_audio_size:
+            return sz + best_audio_size
+        return None
+
+    options = []
+
+    best_video = max(video_formats, key=lambda f: f["height"], default=None)
+    options.append({
+        "label": "Best",
+        "size": _format_size(video_plus_audio_size(best_video)) if best_video else None,
+    })
+
     for threshold in QUALITY_HEIGHT_THRESHOLDS:
         if threshold in heights:
-            labels.append(f"{threshold}p")
-    labels.append("Audio only (mp3)")
-    return labels
+            match = next((f for f in video_formats if f["height"] == threshold and _filesize(f)), None)
+            options.append({
+                "label": f"{threshold}p",
+                "size": _format_size(video_plus_audio_size(match)) if match else None,
+            })
+
+    options.append({"label": "Audio only (mp3)", "size": _format_size(best_audio_size)})
+    return options
 
 
 def get_job(job_id):

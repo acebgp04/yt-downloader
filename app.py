@@ -136,17 +136,29 @@ def info():
         return jsonify({"error": str(e)}), 400
 
     is_playlist = jobs.is_playlist_info(data)
+    unlimited = user_is_unlimited()
+    duration = data.get("duration") or 0
+
     result = {
         "title": data.get("title"),
         "thumbnail": data.get("thumbnail"),
-        "duration": data.get("duration"),
+        "duration": duration,
         "uploader": data.get("uploader"),
         "is_playlist": is_playlist,
+        "unlimited": unlimited,
+        "over_duration_limit": (
+            not unlimited and not is_playlist and duration > jobs.FREE_MAX_DURATION_SECONDS
+        ),
     }
 
     if is_playlist:
         result["total_items"] = data.get("playlist_count") or len(data.get("entries") or [])
-        result["qualities"] = ["Best", "720p", "480p", "Audio only (mp3)"]
+        result["qualities"] = [
+            {"label": "Best", "size": None},
+            {"label": "720p", "size": None},
+            {"label": "480p", "size": None},
+            {"label": "Audio only (mp3)", "size": None},
+        ]
     else:
         result["qualities"] = jobs.quality_options_for(data)
 

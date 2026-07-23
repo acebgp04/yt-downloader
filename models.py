@@ -43,6 +43,7 @@ class IssueReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
+    issue_type = db.Column(db.String(50))
     description = db.Column(db.Text, nullable=False)
     context_url = db.Column(db.String(1000))
     context_error = db.Column(db.Text)

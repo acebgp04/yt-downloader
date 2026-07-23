@@ -10,25 +10,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
 <style>
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin: 20px 0 32px;
-  }
-  .stat-tile {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 16px;
-  }
-  .stat-tile .value { font-size: 1.6rem; font-weight: 700; }
-  .stat-tile .label { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
-  .section-title { font-size: 1.1rem; font-weight: 600; margin: 32px 0 8px; }
   table { font-size: 0.85rem; }
 </style>
 </head>
 <body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
+      <span class="nav-links">
+        {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+      </span>
+    </div>
+  </div>
+
   <div class="page" style="max-width: 900px;">
     <div class="card">
       <h1>Admin</h1>

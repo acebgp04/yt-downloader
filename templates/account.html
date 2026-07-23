@@ -11,6 +11,15 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
 </head>
 <body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
+      <span class="nav-links">
+        {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+      </span>
+    </div>
+  </div>
+
   {% if user.is_subscribed %}
   <div class="page page-narrow" style="padding-top: 80px;">
     <div class="card">

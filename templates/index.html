@@ -203,7 +203,7 @@ const downloadAnotherBtn = document.getElementById("downloadAnotherBtn");
 const reportLink = document.getElementById("reportLink");
 
 const isAuthenticated = {{ "true" if current_user.is_authenticated else "false" }};
-const isSubscribed = {{ "true" if (current_user.is_authenticated and current_user.is_subscribed) else "false" }};
+const isSubscribed = {{ "true" if (current_user.is_authenticated and (current_user.is_subscribed or current_user.is_admin)) else "false" }};
 
 let currentInfo = null;
 let videoQualities = [];

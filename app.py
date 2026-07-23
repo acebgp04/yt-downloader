@@ -95,7 +95,7 @@ def sitemap_xml():
 
 
 def user_is_unlimited():
-    return current_user.is_authenticated and current_user.is_subscribed
+    return current_user.is_authenticated and (current_user.is_subscribed or current_user.is_admin)
 
 
 @app.route("/")

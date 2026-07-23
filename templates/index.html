@@ -210,6 +210,7 @@ let videoQualities = [];
 let selectedFormat = "mp4";
 let selectedQuality = null;
 let blockedReason = null; // "playlist" | "duration" | null
+let preferredQuality = null;
 
 function formatDuration(seconds) {
   if (!seconds) return "";
@@ -322,10 +323,21 @@ async function handleContinue() {
     durationBadge.style.display = data.is_playlist ? "none" : "block";
 
     videoQualities = (data.qualities || []).filter(q => q.label !== "Audio only (mp3)");
-    selectedFormat = "mp4";
-    tabMp4.classList.add("active");
-    tabMp3.classList.remove("active");
-    selectedQuality = null;
+
+    if (preferredQuality === "Audio only (mp3)") {
+      selectedFormat = "mp3";
+      tabMp3.classList.add("active");
+      tabMp4.classList.remove("active");
+      selectedQuality = "Audio only (mp3)";
+    } else {
+      selectedFormat = "mp4";
+      tabMp4.classList.add("active");
+      tabMp3.classList.remove("active");
+      selectedQuality = preferredQuality && videoQualities.find(q => q.label === preferredQuality)
+        ? preferredQuality
+        : null;
+    }
+    preferredQuality = null;
     renderChips();
     updateDownloadLabel();
 
@@ -483,6 +495,20 @@ downloadBtn.addEventListener("click", async () => {
     }
   }
 });
+
+// If arriving from a "Download again" link (e.g. from History), prefill and auto-lookup.
+(function initFromQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  const prefillUrl = params.get("url");
+  if (!prefillUrl) return;
+
+  urlInput.value = prefillUrl;
+  preferredQuality = params.get("quality");
+  handleContinue();
+
+  const cleanUrl = window.location.pathname;
+  window.history.replaceState({}, "", cleanUrl);
+})();
 </script>
 </body>
 </html>

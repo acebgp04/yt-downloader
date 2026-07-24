@@ -135,6 +135,13 @@
       {% endif %}
     </div>
 
+    {% if homepage_ad %}
+      <a href="{{ url_for('ads.ad_click', ad_id=homepage_ad.id) }}" target="_blank" rel="noopener sponsored"
+         style="display: block; max-width: 680px; margin: 24px auto 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);">
+        <img src="{{ homepage_ad.image_url }}" alt="{{ homepage_ad.alt_text or 'Advertisement' }}" style="display: block; width: 100%;">
+      </a>
+    {% endif %}
+
     <div class="feature-grid">
       <div class="feature-tile">
         <div class="mark">&raquo;</div>

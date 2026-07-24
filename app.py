@@ -14,6 +14,7 @@ from billing import billing_bp
 from reports import reports_bp
 from admin import admin_bp
 from donations import donations_bp
+from ads import ads_bp, get_active_ad
 import jobs
 
 app = Flask(__name__)
@@ -40,6 +41,7 @@ app.register_blueprint(billing_bp)
 app.register_blueprint(reports_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(donations_bp)
+app.register_blueprint(ads_bp)
 auth.init_app(app)
 jobs.init_app(app)
 
@@ -130,6 +132,7 @@ def index():
         remaining=remaining,
         limit=jobs.FREE_DOWNLOADS_PER_DAY,
         max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
+        homepage_ad=get_active_ad("homepage_banner"),
     )
 
 

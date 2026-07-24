@@ -51,6 +51,21 @@ class Donation(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Ad(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+    placement = db.Column(db.String(50), nullable=False)
+    image_url = db.Column(db.String(1000), nullable=False)
+    link_url = db.Column(db.String(1000), nullable=False)
+    alt_text = db.Column(db.String(255))
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+
+    impression_count = db.Column(db.Integer, default=0, nullable=False)
+    click_count = db.Column(db.Integer, default=0, nullable=False)
+
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class IssueReport(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)

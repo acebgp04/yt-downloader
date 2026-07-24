@@ -126,12 +126,16 @@
     </div>
 
     <div class="subtitle" style="margin-top: 14px;">
-      {% if remaining is not none %}
+      {% if unlimited_user %}
+        Unlimited downloads and playlists &mdash; thanks for subscribing.
+      {% elif not daily_cap_enabled %}
+        No daily limit right now &middot; single videos, {{ max_minutes }} min max &middot;
+        <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get playlists</a>
+        &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
+      {% else %}
         <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} free downloads left today &middot; {{ max_minutes }} min max &middot;
         <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get unlimited + playlists</a>
         &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
-      {% else %}
-        Unlimited downloads and playlists &mdash; thanks for subscribing.
       {% endif %}
     </div>
 

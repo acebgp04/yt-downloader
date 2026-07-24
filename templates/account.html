@@ -87,7 +87,7 @@
       <div class="pricing-card">
         <div class="plan-name">Free</div>
         <div class="plan-price"><span class="amount">$0</span><span class="period">/ forever</span></div>
-        <div class="perk"><span class="mark">&rsaquo;</span>{{ limit }} downloads per day</div>
+        <div class="perk"><span class="mark">&rsaquo;</span>{{ (limit ~ " downloads per day") if limit else "No daily limit right now" }}</div>
         <div class="perk"><span class="mark">&rsaquo;</span>Single videos up to {{ max_minutes }} min</div>
         <div class="perk"><span class="mark">&rsaquo;</span>MP4 &amp; MP3, up to 1080p</div>
         <button type="button" class="btn-secondary btn-full" disabled style="margin-top: 18px;">Current plan</button>

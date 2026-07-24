@@ -123,8 +123,10 @@ def get_client_ip():
 
 @app.route("/")
 def index():
+    unlimited_user = user_is_unlimited()
+    daily_cap_enabled = jobs.FREE_DOWNLOADS_PER_DAY is not None
     remaining = None
-    if not user_is_unlimited():
+    if not unlimited_user and daily_cap_enabled:
         used = jobs.downloads_used_today(get_client_ip())
         remaining = max(0, jobs.FREE_DOWNLOADS_PER_DAY - used)
     return render_template(
@@ -132,6 +134,8 @@ def index():
         remaining=remaining,
         limit=jobs.FREE_DOWNLOADS_PER_DAY,
         max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
+        unlimited_user=unlimited_user,
+        daily_cap_enabled=daily_cap_enabled,
         homepage_ad=get_active_ad("homepage_banner"),
     )
 

@@ -8,7 +8,10 @@ import yt_dlp
 
 from models import db, DownloadLog
 
-FREE_DOWNLOADS_PER_DAY = 3
+# Temporarily uncapped (None) while gauging real traffic -- set back to a
+# number (e.g. 3) to re-enable the daily download limit for free/anonymous
+# users. The duration cap and playlist gating are unaffected by this.
+FREE_DOWNLOADS_PER_DAY = None
 FREE_MAX_DURATION_SECONDS = 30 * 60
 JOB_TTL_SECONDS = 60 * 60
 
@@ -183,13 +186,14 @@ def create_job(url, quality_label, user_id, ip_address, unlimited):
                 f"free tier limit. Subscribe for unlimited length.",
                 403, "duration",
             )
-        used = downloads_used_today(ip_address)
-        if used >= FREE_DOWNLOADS_PER_DAY:
-            raise JobError(
-                f"You've used your {FREE_DOWNLOADS_PER_DAY} free downloads for today. "
-                f"Subscribe for unlimited downloads.",
-                403, "count",
-            )
+        if FREE_DOWNLOADS_PER_DAY is not None:
+            used = downloads_used_today(ip_address)
+            if used >= FREE_DOWNLOADS_PER_DAY:
+                raise JobError(
+                    f"You've used your {FREE_DOWNLOADS_PER_DAY} free downloads for today. "
+                    f"Subscribe for unlimited downloads.",
+                    403, "count",
+                )
 
     selector = QUALITY_SELECTORS.get(quality_label, QUALITY_SELECTORS["Best"])
     is_audio = quality_label == "Audio only (mp3)"

@@ -42,20 +42,38 @@ def manage_ads():
 @admin_required
 def create_ad():
     placement = request.form.get("placement", "").strip()
-    image_url = request.form.get("image_url", "").strip()
-    link_url = request.form.get("link_url", "").strip()
-    alt_text = request.form.get("alt_text", "").strip()
+    ad_type = request.form.get("ad_type", "image").strip()
+    if ad_type not in ("image", "script"):
+        ad_type = "image"
 
-    if placement in AD_PLACEMENT_VALUES and image_url and link_url:
+    if placement not in AD_PLACEMENT_VALUES:
+        return redirect(url_for("ads.manage_ads"))
+
+    if ad_type == "script":
+        script_content = request.form.get("script_content", "").strip()
+        if not script_content:
+            return redirect(url_for("ads.manage_ads"))
         ad = Ad(
             placement=placement,
+            ad_type="script",
+            script_content=script_content,
+        )
+    else:
+        image_url = request.form.get("image_url", "").strip()
+        link_url = request.form.get("link_url", "").strip()
+        alt_text = request.form.get("alt_text", "").strip()
+        if not image_url or not link_url:
+            return redirect(url_for("ads.manage_ads"))
+        ad = Ad(
+            placement=placement,
+            ad_type="image",
             image_url=image_url,
             link_url=link_url,
             alt_text=alt_text or None,
         )
-        db.session.add(ad)
-        db.session.commit()
 
+    db.session.add(ad)
+    db.session.commit()
     return redirect(url_for("ads.manage_ads"))
 
 

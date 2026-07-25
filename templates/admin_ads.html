@@ -60,6 +60,7 @@
           <label>Ad type</label>
           <div class="tabs" id="typeTabs">
             <button type="button" class="tab active" id="tabImage">Image + link</button>
+            <button type="button" class="tab" id="tabSmartlink">Smartlink (no image)</button>
             <button type="button" class="tab" id="tabScript">Script / embed code</button>
           </div>
           <input type="hidden" name="ad_type" id="adTypeInput" value="image">
@@ -80,6 +81,17 @@
           </div>
         </div>
 
+        <div id="smartlinkFields" style="display: none;">
+          <div>
+            <label for="smartlink_url">Smartlink URL</label>
+            <input type="text" id="smartlink_url" name="smartlink_url" placeholder="https://...">
+          </div>
+          <div style="margin-top: 14px;">
+            <label for="link_text">Link text</label>
+            <input type="text" id="link_text" name="link_text" placeholder="e.g. Sponsored offer">
+          </div>
+        </div>
+
         <div id="scriptFields" style="display: none;">
           <label for="script_content">Embed code</label>
           <textarea id="script_content" name="script_content" rows="4"
@@ -95,26 +107,33 @@
 
       <script>
         const tabImage = document.getElementById("tabImage");
+        const tabSmartlink = document.getElementById("tabSmartlink");
         const tabScript = document.getElementById("tabScript");
         const imageFields = document.getElementById("imageFields");
+        const smartlinkFields = document.getElementById("smartlinkFields");
         const scriptFields = document.getElementById("scriptFields");
         const adTypeInput = document.getElementById("adTypeInput");
         const imageUrlInput = document.getElementById("image_url");
         const linkUrlInput = document.getElementById("link_url");
+        const smartlinkUrlInput = document.getElementById("smartlink_url");
         const scriptContentInput = document.getElementById("script_content");
 
         function selectType(type) {
           adTypeInput.value = type;
           tabImage.classList.toggle("active", type === "image");
+          tabSmartlink.classList.toggle("active", type === "smartlink");
           tabScript.classList.toggle("active", type === "script");
           imageFields.style.display = type === "image" ? "block" : "none";
+          smartlinkFields.style.display = type === "smartlink" ? "block" : "none";
           scriptFields.style.display = type === "script" ? "block" : "none";
           imageUrlInput.required = type === "image";
           linkUrlInput.required = type === "image";
+          smartlinkUrlInput.required = type === "smartlink";
           scriptContentInput.required = type === "script";
         }
 
         tabImage.addEventListener("click", () => selectType("image"));
+        tabSmartlink.addEventListener("click", () => selectType("smartlink"));
         tabScript.addEventListener("click", () => selectType("script"));
         selectType("image");
       </script>
@@ -137,6 +156,8 @@
               <td>
                 {% if ad.ad_type == "script" %}
                   <span class="mono" style="font-size: 0.75rem; color: var(--text-muted);">(script embed)</span>
+                {% elif ad.ad_type == "smartlink" %}
+                  <span class="mono" style="font-size: 0.75rem; color: var(--text-muted);">{{ ad.link_text or "(smartlink)" }}</span>
                 {% else %}
                   <img class="ad-thumb" src="{{ ad.image_url }}" alt="{{ ad.alt_text or 'ad preview' }}">
                 {% endif %}
@@ -145,7 +166,7 @@
               <td>{{ ad.placement }}</td>
               <td><span class="status-pill {{ 'active' if ad.is_active else 'inactive' }}">{{ "Active" if ad.is_active else "Paused" }}</span></td>
               <td>{{ ad.impression_count }}</td>
-              <td>{{ ad.click_count if ad.ad_type == "image" else "-" }}</td>
+              <td>{{ ad.click_count if ad.ad_type in ("image", "smartlink") else "-" }}</td>
               <td>{{ ad.created_at.strftime("%Y-%m-%d") }}</td>
               <td style="white-space: nowrap;">
                 <form method="POST" action="{{ url_for('ads.toggle_ad', ad_id=ad.id) }}" style="display:inline">

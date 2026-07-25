@@ -144,6 +144,11 @@
         <div style="max-width: 680px; margin: 24px auto 0;">
           {{ homepage_ad.script_content | safe }}
         </div>
+      {% elif homepage_ad.ad_type == "smartlink" %}
+        <a href="{{ url_for('ads.ad_click', ad_id=homepage_ad.id) }}" target="_blank" rel="noopener sponsored"
+           class="btn btn-secondary" style="display: block; max-width: 680px; margin: 24px auto 0; text-align: center;">
+          {{ homepage_ad.link_text or "Sponsored" }}
+        </a>
       {% else %}
         <a href="{{ url_for('ads.ad_click', ad_id=homepage_ad.id) }}" target="_blank" rel="noopener sponsored"
            style="display: block; max-width: 680px; margin: 24px auto 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);">

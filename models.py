@@ -54,13 +54,16 @@ class Donation(db.Model):
 class Ad(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
-    ad_type = db.Column(db.String(20), default="image", nullable=False)  # "image" | "script"
+    ad_type = db.Column(db.String(20), default="image", nullable=False)  # "image" | "script" | "smartlink"
     placement = db.Column(db.String(50), nullable=False)
 
-    # Used when ad_type == "image"
+    # Used when ad_type == "image"; link_url is also used for "smartlink"
     image_url = db.Column(db.String(1000), nullable=False, default="")
     link_url = db.Column(db.String(1000), nullable=False, default="")
     alt_text = db.Column(db.String(255))
+
+    # Used when ad_type == "smartlink" -- the visible text of the link (no image)
+    link_text = db.Column(db.String(255))
 
     # Used when ad_type == "script" -- a raw embed snippet from an ad network (e.g. Adsterra)
     script_content = db.Column(db.Text)

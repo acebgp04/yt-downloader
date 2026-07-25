@@ -43,7 +43,7 @@ def manage_ads():
 def create_ad():
     placement = request.form.get("placement", "").strip()
     ad_type = request.form.get("ad_type", "image").strip()
-    if ad_type not in ("image", "script"):
+    if ad_type not in ("image", "script", "smartlink"):
         ad_type = "image"
 
     if placement not in AD_PLACEMENT_VALUES:
@@ -57,6 +57,17 @@ def create_ad():
             placement=placement,
             ad_type="script",
             script_content=script_content,
+        )
+    elif ad_type == "smartlink":
+        link_url = request.form.get("smartlink_url", "").strip()
+        link_text = request.form.get("link_text", "").strip()
+        if not link_url:
+            return redirect(url_for("ads.manage_ads"))
+        ad = Ad(
+            placement=placement,
+            ad_type="smartlink",
+            link_url=link_url,
+            link_text=link_text or None,
         )
     else:
         image_url = request.form.get("image_url", "").strip()

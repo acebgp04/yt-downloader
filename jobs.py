@@ -289,9 +289,15 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
     else:
         outtmpl = os.path.join(job_dir, "%(title)s.%(ext)s")
 
+    # download_ranges yields chapters with their original position in the full
+    # video (needed for %(section_number)03d in filenames), but progress should
+    # reflect position within the user's *selection* -- map one to the other.
+    chapter_position = {ch["index"]: i + 1 for i, ch in enumerate(selected_chapters)}
+
     def progress_hook(d):
         info_dict = d.get("info_dict") or {}
-        idx = info_dict.get("playlist_index") or info_dict.get("section_number") or 1
+        raw_idx = info_dict.get("playlist_index") or info_dict.get("section_number") or 1
+        idx = chapter_position.get(raw_idx, raw_idx)
         current_job = get_job(job_id) or {}
         n_entries = info_dict.get("n_entries") or current_job.get("total_items") or 1
         status = d.get("status")

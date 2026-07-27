@@ -153,11 +153,11 @@
       {% if unlimited_user %}
         Unlimited downloads and playlists &mdash; thanks for subscribing.
       {% elif not daily_cap_enabled %}
-        No daily limit right now &middot; single videos, {{ max_minutes }} min max &middot;
+        No daily limit right now &middot;
         <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get playlists</a>
         &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
       {% else %}
-        <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} free downloads left today &middot; {{ max_minutes }} min max &middot;
+        <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} free download{{ "s" if limit != 1 else "" }} left today, any length &middot;
         <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get unlimited + playlists</a>
         &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
       {% endif %}
@@ -367,13 +367,6 @@ function updateBlockState() {
     limitBanner.innerHTML = isAuthenticated
       ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
       : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
-    limitBanner.style.display = "block";
-    actionArea.style.display = "none";
-  } else if (data.over_duration_limit && splitMode !== "chapters") {
-    blockedReason = "duration";
-    limitBanner.innerHTML = isAuthenticated
-      ? 'This video is too long for the free tier. <a href="/account">Subscribe for unlimited length</a>.'
-      : 'This video is too long for the free tier. <a href="/signup">Sign up to subscribe</a>.';
     limitBanner.style.display = "block";
     actionArea.style.display = "none";
   } else {

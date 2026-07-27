@@ -51,7 +51,6 @@ def account():
         "account.html",
         user=current_user,
         limit=jobs.FREE_DOWNLOADS_PER_DAY,
-        max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
         price=get_price_display(),
     )
 

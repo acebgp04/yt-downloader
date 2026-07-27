@@ -153,7 +153,6 @@ def index():
         "index.html",
         remaining=remaining,
         limit=jobs.FREE_DOWNLOADS_PER_DAY,
-        max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
         unlimited_user=unlimited_user,
         daily_cap_enabled=daily_cap_enabled,
         homepage_ad=get_active_ad("homepage_banner"),
@@ -194,9 +193,6 @@ def info():
         "uploader": data.get("uploader"),
         "is_playlist": is_playlist,
         "unlimited": unlimited,
-        "over_duration_limit": (
-            not unlimited and not is_playlist and duration > jobs.FREE_MAX_DURATION_SECONDS
-        ),
     }
 
     if is_playlist:

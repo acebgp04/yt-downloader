@@ -138,7 +138,7 @@
         <div class="done-panel" id="donePanel">
           <div class="check">&#10003;</div>
           <div style="flex: 1; min-width: 0;">
-            <div class="title">Your file is ready</div>
+            <div class="title">Ready &mdash; click below to download</div>
             <div class="filename" id="doneFilename"></div>
             <div id="doneLinks" style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;"></div>
           </div>
@@ -499,19 +499,6 @@ urlInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") handleContinue();
 });
 
-function triggerDownloads(jobId, files) {
-  files.forEach((f, i) => {
-    setTimeout(() => {
-      const a = document.createElement("a");
-      a.href = `/api/jobs/${jobId}/download/${f.index}`;
-      a.download = "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    }, i * 400);
-  });
-}
-
 // Playlist/chapter file titles are all "<source title> — <item title>" --
 // find that shared prefix so the done panel can show it once instead of
 // repeating it for every file.
@@ -585,7 +572,12 @@ function pollJob(jobId, sourceUrl, quality) {
         actionArea.style.display = "block";
         downloadBtn.disabled = false;
         statusEl.textContent = "";
-        triggerDownloads(jobId, job.files);
+        // No automatic a.click() here: browsers (Chrome in particular) can
+        // silently block programmatic downloads not tied to a fresh user
+        // gesture, and firing several in a row (playlists/chapters) can trip
+        // "multiple automatic downloads" protection that then suppresses
+        // *all* further downloads on the page, including genuine clicks on
+        // the manual links below. Always require an explicit click instead.
         const titles = job.files.map(f => f.title);
         const commonPrefix = job.files.length > 1 ? findCommonTitlePrefix(titles) : null;
         doneFilename.textContent = commonPrefix

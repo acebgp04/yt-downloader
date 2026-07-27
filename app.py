@@ -1,5 +1,5 @@
 import os
-from datetime import timezone
+from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
@@ -25,6 +25,12 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "app.db"
 )
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Sessions last until the user explicitly logs out, not on a timer or when the
+# browser closes -- login_user(..., remember=True) + session.permanent = True
+# in auth.py rely on these being long-lived.
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=365)
+app.config["REMEMBER_COOKIE_DURATION"] = timedelta(days=365)
 
 db.init_app(app)
 

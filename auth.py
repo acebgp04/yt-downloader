@@ -1,6 +1,7 @@
 import os
+from urllib.parse import urlparse
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
@@ -26,6 +27,22 @@ def init_app(app):
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
         client_kwargs={"scope": "openid email profile"},
     )
+
+
+def _is_safe_next_url(next_url):
+    if not next_url:
+        return False
+    parsed = urlparse(next_url)
+    if parsed.netloc and parsed.netloc != request.host:
+        return False
+    if parsed.scheme and parsed.scheme not in ("http", "https"):
+        return False
+    return True
+
+
+def _log_in(user):
+    login_user(user, remember=True)
+    session.permanent = True
 
 
 def _serializer(salt):
@@ -65,7 +82,7 @@ def signup():
         send_verification_email(user, token)
         send_new_user_notification(user)
 
-        login_user(user)
+        _log_in(user)
         flash("We've sent a verification link to your email.")
         return redirect(url_for("billing.account"))
 
@@ -74,6 +91,10 @@ def signup():
 
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
+    next_url = request.args.get("next") or request.form.get("next")
+    if not _is_safe_next_url(next_url):
+        next_url = None
+
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
@@ -81,19 +102,24 @@ def login():
         user = User.query.filter_by(email=email).first()
         if not user or not user.password_hash:
             flash("Invalid email or password.")
-            return redirect(url_for("auth.login"))
+            return redirect(url_for("auth.login", next=next_url))
         if not check_password_hash(user.password_hash, password):
             flash("Invalid email or password.")
-            return redirect(url_for("auth.login"))
+            return redirect(url_for("auth.login", next=next_url))
 
-        login_user(user)
-        return redirect(url_for("billing.account"))
+        _log_in(user)
+        return redirect(next_url or url_for("billing.account"))
 
-    return render_template("login.html")
+    return render_template("login.html", next=next_url)
 
 
 @auth_bp.route("/auth/google/login")
 def google_login():
+    next_url = request.args.get("next")
+    if _is_safe_next_url(next_url):
+        session["post_login_next"] = next_url
+    else:
+        session.pop("post_login_next", None)
     redirect_uri = url_for("auth.google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -129,8 +155,9 @@ def google_callback():
         db.session.commit()
         send_new_user_notification(user)
 
-    login_user(user)
-    return redirect(url_for("billing.account"))
+    _log_in(user)
+    next_url = session.pop("post_login_next", None)
+    return redirect(next_url or url_for("billing.account"))
 
 
 @auth_bp.route("/logout")

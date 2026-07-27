@@ -20,7 +20,7 @@
       <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>Video Downloader</a>
       <span class="nav-links">
         {% if current_user.is_authenticated %}
-          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> {% if current_user.is_admin %}<a href="{{ url_for('admin.dashboard') }}">Admin</a> {% endif %}<a href="{{ url_for('auth.logout') }}">Log out</a>
         {% else %}
           <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a>
         {% endif %}

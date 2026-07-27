@@ -370,6 +370,13 @@ function updateBlockState() {
       : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
     limitBanner.style.display = "block";
     actionArea.style.display = "none";
+  } else if (splitMode === "chapters" && !isSubscribed) {
+    blockedReason = "chapters";
+    limitBanner.innerHTML = isAuthenticated
+      ? 'Chapter downloads require a subscription. <a href="/account">Subscribe for unlimited + chapters</a>.'
+      : 'Chapter downloads require a subscription. <a href="/signup">Sign up to subscribe</a>.';
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
   } else if (data.blocked_long_video && splitMode !== "chapters") {
     blockedReason = "duration";
     limitBanner.innerHTML = isAuthenticated

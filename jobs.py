@@ -220,6 +220,12 @@ def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="w
             403, "playlist",
         )
 
+    if split_mode == "chapters" and not playlist and not unlimited:
+        raise JobError(
+            "Chapter downloads are available to subscribers only. Subscribe for unlimited downloads.",
+            403, "chapters",
+        )
+
     selected_chapters = []
     if playlist:
         split_mode = "whole"

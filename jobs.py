@@ -19,7 +19,10 @@ JOB_TTL_SECONDS = 60 * 60
 DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), "yt-downloader")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-PLAYER_CLIENT_ARGS = {"youtube": {"player_client": ["android", "web"]}}
+# android/web keep the original 403 workaround; android_vr is a fallback for
+# videos (e.g. ended livestreams) where android/web report a stale "live
+# event has ended" status but a replay is actually available.
+PLAYER_CLIENT_ARGS = {"youtube": {"player_client": ["android", "web", "android_vr"]}}
 
 QUALITY_HEIGHT_THRESHOLDS = [1080, 720, 480, 360]
 

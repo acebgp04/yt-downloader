@@ -3,6 +3,7 @@ import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import urlparse, parse_qs
 
 import yt_dlp
 
@@ -65,6 +66,19 @@ def downloads_used_today(ip_address):
     ).count()
 
 
+def _is_radio_mix_url(url):
+    # YouTube's auto-generated "Mix"/Radio autoplay queues use a list id
+    # starting with "RD" and can run into the thousands of (algorithmically
+    # generated, ever-changing) entries. They aren't a real playlist a user
+    # curated -- pasting one almost always means "download this one video",
+    # and treating it as a playlist makes even the lookup take 20-30+ seconds.
+    try:
+        list_id = (parse_qs(urlparse(url).query).get("list") or [""])[0]
+    except ValueError:
+        return False
+    return list_id.startswith("RD")
+
+
 def probe(url):
     opts = {
         "quiet": True,
@@ -72,6 +86,8 @@ def probe(url):
         "extract_flat": "in_playlist",
         "extractor_args": PLAYER_CLIENT_ARGS,
     }
+    if _is_radio_mix_url(url):
+        opts["noplaylist"] = True
     with yt_dlp.YoutubeDL(opts) as ydl:
         return ydl.extract_info(url, download=False)
 

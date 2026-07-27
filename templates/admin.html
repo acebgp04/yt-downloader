@@ -50,7 +50,7 @@
               <td>{{ "Yes" if u.email_verified else "No" }}</td>
               <td>{{ "Yes" if u.is_subscribed else "No" }}</td>
               <td>{{ "Google" if u.google_id else "Password" }}</td>
-              <td>{{ u.created_at.strftime("%Y-%m-%d %H:%M") }} UTC</td>
+              <td>{{ u.created_at | eastern }}</td>
             </tr>
           {% endfor %}
         </table>
@@ -64,12 +64,18 @@
           <tr><th>Title</th><th>User</th><th>IP</th><th>Format</th><th>Quality</th><th>Date</th></tr>
           {% for log, email in recent_downloads %}
             <tr>
-              <td>{{ log.title or "-" }}</td>
+              <td>
+                {% if log.source_url %}
+                  <a href="{{ log.source_url }}" target="_blank" rel="noopener">{{ log.title or log.source_url }}</a>
+                {% else %}
+                  {{ log.title or "-" }}
+                {% endif %}
+              </td>
               <td>{{ email or "anonymous" }}</td>
               <td>{{ log.ip_address }}</td>
               <td>{{ log.format or "-" }}</td>
               <td>{{ log.quality or "-" }}</td>
-              <td>{{ log.created_at.strftime("%Y-%m-%d %H:%M") }} UTC</td>
+              <td>{{ log.created_at | eastern }}</td>
             </tr>
           {% endfor %}
         </table>
@@ -86,7 +92,7 @@
               <td>{{ email }}</td>
               <td>{{ report.issue_type or "-" }}</td>
               <td>{{ report.description }}</td>
-              <td>{{ report.created_at.strftime("%Y-%m-%d %H:%M") }} UTC</td>
+              <td>{{ report.created_at | eastern }}</td>
             </tr>
           {% endfor %}
         </table>
@@ -102,7 +108,7 @@
             <tr>
               <td>${{ "%.2f"|format(d.amount_cents / 100) }} {{ d.currency }}</td>
               <td>{{ d.donor_email or "-" }}</td>
-              <td>{{ d.created_at.strftime("%Y-%m-%d %H:%M") }} UTC</td>
+              <td>{{ d.created_at | eastern }}</td>
             </tr>
           {% endfor %}
         </table>

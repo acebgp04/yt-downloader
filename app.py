@@ -1,4 +1,6 @@
 import os
+from datetime import timezone
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -60,6 +62,18 @@ except OSError:
 @app.context_processor
 def inject_base_url():
     return {"base_url": BASE_URL, "asset_version": ASSET_VERSION}
+
+
+EASTERN = ZoneInfo("America/New_York")
+
+
+@app.template_filter("eastern")
+def format_eastern(dt):
+    if dt is None:
+        return "-"
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(EASTERN).strftime("%Y-%m-%d %I:%M %p ET")
 
 
 @app.route("/google338e2ecb0ee9220b.html")

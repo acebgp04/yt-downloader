@@ -512,6 +512,24 @@ function triggerDownloads(jobId, files) {
   });
 }
 
+// Playlist/chapter file titles are all "<source title> — <item title>" --
+// find that shared prefix so the done panel can show it once instead of
+// repeating it for every file.
+function findCommonTitlePrefix(titles) {
+  const first = titles[0] || "";
+  const sepIndex = first.indexOf(" — ");
+  if (sepIndex === -1) return null;
+  const prefix = first.slice(0, sepIndex);
+  return titles.every((t) => t.startsWith(prefix + " — ")) ? prefix : null;
+}
+
+function stripTitlePrefix(title, prefix) {
+  if (prefix && title.startsWith(prefix + " — ")) {
+    return title.slice(prefix.length + 3);
+  }
+  return title;
+}
+
 let postprocessingStartedAt = null;
 let itemDownloadStartedAt = null;
 
@@ -568,15 +586,19 @@ function pollJob(jobId, sourceUrl, quality) {
         downloadBtn.disabled = false;
         statusEl.textContent = "";
         triggerDownloads(jobId, job.files);
-        const names = job.files.map(f => f.title).join(", ");
-        doneFilename.textContent = names;
+        const titles = job.files.map(f => f.title);
+        const commonPrefix = job.files.length > 1 ? findCommonTitlePrefix(titles) : null;
+        doneFilename.textContent = commonPrefix
+          ? `${job.files.length} files from "${commonPrefix}"`
+          : titles.join(", ");
         doneLinks.innerHTML = "";
         job.files.forEach((f) => {
           const a = document.createElement("a");
           a.href = `/api/jobs/${jobId}/download/${f.index}`;
           a.download = "";
           a.className = "btn-link";
-          a.textContent = job.files.length > 1 ? `Download: ${f.title}` : "Click here to download";
+          const label = stripTitlePrefix(f.title, commonPrefix);
+          a.textContent = job.files.length > 1 ? `Download: ${label}` : "Click here to download";
           doneLinks.appendChild(a);
         });
         donePanel.style.display = "flex";

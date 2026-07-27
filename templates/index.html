@@ -138,8 +138,9 @@
         <div class="done-panel" id="donePanel">
           <div class="check">&#10003;</div>
           <div style="flex: 1; min-width: 0;">
-            <div class="title">Your download has started</div>
+            <div class="title">Your file is ready</div>
             <div class="filename" id="doneFilename"></div>
+            <div id="doneLinks" style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;"></div>
           </div>
           <button type="button" id="downloadAnotherBtn" class="btn-secondary">Download another</button>
         </div>
@@ -258,6 +259,7 @@ const progressBar = document.getElementById("progressBar");
 const progressLabel = document.getElementById("progressLabel");
 const donePanel = document.getElementById("donePanel");
 const doneFilename = document.getElementById("doneFilename");
+const doneLinks = document.getElementById("doneLinks");
 const downloadAnotherBtn = document.getElementById("downloadAnotherBtn");
 const reportLink = document.getElementById("reportLink");
 
@@ -395,6 +397,7 @@ function resetForm() {
   urlInput.value = "";
   revealPanel.style.display = "none";
   donePanel.style.display = "none";
+  doneLinks.innerHTML = "";
   progressWrap.style.display = "none";
   actionArea.style.display = "block";
   splitSection.style.display = "none";
@@ -567,6 +570,15 @@ function pollJob(jobId, sourceUrl, quality) {
         triggerDownloads(jobId, job.files);
         const names = job.files.map(f => f.title).join(", ");
         doneFilename.textContent = names;
+        doneLinks.innerHTML = "";
+        job.files.forEach((f) => {
+          const a = document.createElement("a");
+          a.href = `/api/jobs/${jobId}/download/${f.index}`;
+          a.download = "";
+          a.className = "btn-link";
+          a.textContent = job.files.length > 1 ? `Download: ${f.title}` : "Click here to download";
+          doneLinks.appendChild(a);
+        });
         donePanel.style.display = "flex";
       } else if (job.status === "error") {
         clearInterval(interval);
@@ -606,6 +618,7 @@ downloadBtn.addEventListener("click", async () => {
   downloadBtn.disabled = true;
   actionArea.style.display = "none";
   donePanel.style.display = "none";
+  doneLinks.innerHTML = "";
   progressWrap.style.display = "block";
   progressBar.value = 0;
   progressBar.classList.remove("progress-pulse");

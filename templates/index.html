@@ -113,6 +113,19 @@
 
         <div class="chips" id="qualityChips"></div>
 
+        <div id="splitSection" style="display: none; margin-top: 16px;">
+          <div class="tabs" id="splitTabs">
+            <button type="button" class="tab active" id="tabWhole">Whole video</button>
+            <button type="button" class="tab" id="tabChapters">Split by chapters</button>
+          </div>
+          <div id="chapterListWrap" style="display: none; margin-top: 10px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; margin-bottom: 8px;">
+              <input type="checkbox" id="selectAllChapters"> Select all
+            </label>
+            <div id="chapterList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+          </div>
+        </div>
+
         <div id="actionArea" style="margin-top: 16px;">
           <button id="downloadBtn" class="btn-full">Download <span id="downloadLabel"></span></button>
         </div>
@@ -230,6 +243,12 @@ const limitBanner = document.getElementById("limitBanner");
 const tabMp4 = document.getElementById("tabMp4");
 const tabMp3 = document.getElementById("tabMp3");
 const qualityChips = document.getElementById("qualityChips");
+const splitSection = document.getElementById("splitSection");
+const tabWhole = document.getElementById("tabWhole");
+const tabChapters = document.getElementById("tabChapters");
+const chapterListWrap = document.getElementById("chapterListWrap");
+const chapterListEl = document.getElementById("chapterList");
+const selectAllChapters = document.getElementById("selectAllChapters");
 const actionArea = document.getElementById("actionArea");
 const downloadBtn = document.getElementById("downloadBtn");
 const downloadLabel = document.getElementById("downloadLabel");
@@ -250,6 +269,43 @@ let selectedFormat = "mp4";
 let selectedQuality = null;
 let blockedReason = null; // "playlist" | "duration" | null
 let preferredQuality = null;
+let currentChapters = [];
+let splitMode = "whole";
+
+function selectSplit(mode) {
+  splitMode = mode;
+  tabWhole.classList.toggle("active", mode === "whole");
+  tabChapters.classList.toggle("active", mode === "chapters");
+  chapterListWrap.style.display = mode === "chapters" ? "block" : "none";
+  updateBlockState();
+}
+tabWhole.addEventListener("click", () => selectSplit("whole"));
+tabChapters.addEventListener("click", () => selectSplit("chapters"));
+
+function updateSelectAllState() {
+  const boxes = Array.from(document.querySelectorAll(".chapterCheck"));
+  selectAllChapters.checked = boxes.length > 0 && boxes.every((b) => b.checked);
+}
+
+selectAllChapters.addEventListener("change", () => {
+  document.querySelectorAll(".chapterCheck").forEach((b) => { b.checked = selectAllChapters.checked; });
+});
+
+chapterListEl.addEventListener("change", (e) => {
+  if (e.target.classList.contains("chapterCheck")) updateSelectAllState();
+});
+
+function renderChapterList() {
+  chapterListEl.innerHTML = "";
+  currentChapters.forEach((ch) => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex; align-items:center; gap:8px; font-size:0.85rem;";
+    const dur = ch.end_time ? ` <span style="color: var(--text-muted);">(${formatDuration(ch.end_time - ch.start_time)})</span>` : "";
+    row.innerHTML = `<input type="checkbox" class="chapterCheck" value="${ch.index}" checked> ${ch.title}${dur}`;
+    chapterListEl.appendChild(row);
+  });
+  updateSelectAllState();
+}
 
 function formatDuration(seconds) {
   if (!seconds) return "";
@@ -302,12 +358,38 @@ function selectTab(format) {
 tabMp4.addEventListener("click", () => selectTab("mp4"));
 tabMp3.addEventListener("click", () => selectTab("mp3"));
 
+function updateBlockState() {
+  const data = currentInfo;
+  if (!data) return;
+
+  if (data.is_playlist && !isSubscribed) {
+    blockedReason = "playlist";
+    limitBanner.innerHTML = isAuthenticated
+      ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
+      : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
+  } else if (data.over_duration_limit && splitMode !== "chapters") {
+    blockedReason = "duration";
+    limitBanner.innerHTML = isAuthenticated
+      ? 'This video is too long for the free tier. <a href="/account">Subscribe for unlimited length</a>.'
+      : 'This video is too long for the free tier. <a href="/signup">Sign up to subscribe</a>.';
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
+  } else {
+    blockedReason = null;
+    limitBanner.style.display = "none";
+    actionArea.style.display = "block";
+  }
+}
+
 function resetForm() {
   urlInput.value = "";
   revealPanel.style.display = "none";
   donePanel.style.display = "none";
   progressWrap.style.display = "none";
   actionArea.style.display = "block";
+  splitSection.style.display = "none";
   statusEl.textContent = "";
   statusEl.classList.remove("error");
   reportLink.innerHTML = "";
@@ -380,25 +462,17 @@ async function handleContinue() {
     renderChips();
     updateDownloadLabel();
 
-    if (data.is_playlist && !isSubscribed) {
-      blockedReason = "playlist";
-      limitBanner.innerHTML = isAuthenticated
-        ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
-        : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
-      limitBanner.style.display = "block";
-      actionArea.style.display = "none";
-    } else if (data.over_duration_limit) {
-      blockedReason = "duration";
-      limitBanner.innerHTML = isAuthenticated
-        ? 'This video is too long for the free tier. <a href="/account">Subscribe for unlimited length</a>.'
-        : 'This video is too long for the free tier. <a href="/signup">Sign up to subscribe</a>.';
-      limitBanner.style.display = "block";
-      actionArea.style.display = "none";
+    currentChapters = (!data.is_playlist && data.chapters) ? data.chapters : [];
+    if (currentChapters.length > 0) {
+      splitSection.style.display = "block";
+      renderChapterList();
+      selectSplit("whole");
     } else {
-      blockedReason = null;
-      limitBanner.style.display = "none";
-      actionArea.style.display = "block";
+      splitSection.style.display = "none";
+      splitMode = "whole";
     }
+
+    updateBlockState();
 
     revealPanel.style.display = "block";
   } catch (e) {
@@ -454,7 +528,7 @@ function pollJob(jobId, sourceUrl, quality) {
       }
 
       progressBar.value = job.progress;
-      if (job.kind === "playlist") {
+      if (job.kind === "playlist" || job.kind === "chapters") {
         progressLabel.textContent = `Item ${job.current_item} of ${job.total_items}` +
           (job.current_item_title ? `: ${job.current_item_title}` : "") + ` — ${job.progress}%`;
         progressBar.classList.remove("progress-pulse");
@@ -497,6 +571,18 @@ downloadBtn.addEventListener("click", async () => {
   const quality = selectedQuality || "Best";
   if (!url || blockedReason) return;
 
+  const body = { url, quality };
+  if (splitMode === "chapters" && currentChapters.length > 0) {
+    const selected = Array.from(document.querySelectorAll(".chapterCheck:checked")).map((b) => parseInt(b.value, 10));
+    if (selected.length === 0) {
+      statusEl.classList.add("error");
+      statusEl.textContent = "Select at least one chapter, or switch to Whole video.";
+      return;
+    }
+    body.split_mode = "chapters";
+    body.chapter_indices = selected;
+  }
+
   statusEl.classList.remove("error");
   statusEl.textContent = "";
   reportLink.innerHTML = "";
@@ -512,7 +598,7 @@ downloadBtn.addEventListener("click", async () => {
     const resp = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, quality }),
+      body: JSON.stringify(body),
     });
     const data = await resp.json();
 

@@ -80,6 +80,19 @@ def is_playlist_info(info):
     return info.get("_type") == "playlist"
 
 
+def chapters_for(info):
+    chapters = info.get("chapters") or []
+    return [
+        {
+            "index": i + 1,
+            "title": ch.get("title") or f"Chapter {i + 1}",
+            "start_time": ch.get("start_time") or 0,
+            "end_time": ch.get("end_time"),
+        }
+        for i, ch in enumerate(chapters)
+    ]
+
+
 def _format_size(num_bytes):
     if not num_bytes:
         return None
@@ -162,7 +175,7 @@ def _prune_old_jobs():
             _jobs.pop(jid, None)
 
 
-def create_job(url, quality_label, user_id, ip_address, unlimited):
+def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="whole", chapter_indices=None):
     _prune_old_jobs()
 
     try:
@@ -178,8 +191,22 @@ def create_job(url, quality_label, user_id, ip_address, unlimited):
             403, "playlist",
         )
 
+    selected_chapters = []
+    if playlist:
+        split_mode = "whole"
+    elif split_mode == "chapters":
+        wanted = set(chapter_indices or [])
+        selected_chapters = [ch for ch in chapters_for(info) if ch["index"] in wanted]
+        if not selected_chapters:
+            raise JobError("No chapters selected.", 400)
+    else:
+        split_mode = "whole"
+
     if not playlist and not unlimited:
-        duration = info.get("duration") or 0
+        if split_mode == "chapters":
+            duration = sum((ch["end_time"] or 0) - (ch["start_time"] or 0) for ch in selected_chapters)
+        else:
+            duration = info.get("duration") or 0
         if duration > FREE_MAX_DURATION_SECONDS:
             raise JobError(
                 f"This video is longer than the {FREE_MAX_DURATION_SECONDS // 60}-minute "
@@ -197,8 +224,15 @@ def create_job(url, quality_label, user_id, ip_address, unlimited):
 
     selector = QUALITY_SELECTORS.get(quality_label, QUALITY_SELECTORS["Best"])
     is_audio = quality_label == "Audio only (mp3)"
-    total_items = (info.get("playlist_count") or len(info.get("entries") or []) or 1) if playlist else 1
-    kind = "playlist" if playlist else "single"
+    if split_mode == "chapters":
+        total_items = len(selected_chapters)
+        kind = "chapters"
+    elif playlist:
+        total_items = info.get("playlist_count") or len(info.get("entries") or []) or 1
+        kind = "playlist"
+    else:
+        total_items = 1
+        kind = "single"
 
     job_id = str(uuid.uuid4())
     with _jobs_lock:
@@ -218,7 +252,7 @@ def create_job(url, quality_label, user_id, ip_address, unlimited):
 
     thread = threading.Thread(
         target=_run_job,
-        args=(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id),
+        args=(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id, selected_chapters),
         daemon=True,
     )
     thread.start()
@@ -226,6 +260,14 @@ def create_job(url, quality_label, user_id, ip_address, unlimited):
 
 
 def _resolve_filename(ydl, entry, is_audio):
+    # Section/chapter downloads strip unchanged fields (e.g. "title") from the
+    # entry dict, which breaks prepare_filename()'s recomputation -- but they
+    # do set "filepath" to the final resolved (post-postprocessing) path, so
+    # prefer that when present.
+    filepath = entry.get("filepath")
+    if filepath:
+        return filepath
+
     filename = ydl.prepare_filename(entry)
     if is_audio:
         base, _ = os.path.splitext(filename)
@@ -233,19 +275,23 @@ def _resolve_filename(ydl, entry, is_audio):
     return filename
 
 
-def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id):
-    kind = "playlist" if playlist else "single"
+def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id, selected_chapters=None):
+    selected_chapters = selected_chapters or []
+    split_chapters = bool(selected_chapters)
+    kind = "chapters" if split_chapters else ("playlist" if playlist else "single")
     job_dir = os.path.join(DOWNLOAD_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
     if playlist:
         outtmpl = os.path.join(job_dir, "%(playlist_index)s - %(title)s.%(ext)s")
+    elif split_chapters:
+        outtmpl = os.path.join(job_dir, "%(title)s - %(section_number)03d - %(section_title)s.%(ext)s")
     else:
         outtmpl = os.path.join(job_dir, "%(title)s.%(ext)s")
 
     def progress_hook(d):
         info_dict = d.get("info_dict") or {}
-        idx = info_dict.get("playlist_index") or 1
+        idx = info_dict.get("playlist_index") or info_dict.get("section_number") or 1
         current_job = get_job(job_id) or {}
         n_entries = info_dict.get("n_entries") or current_job.get("total_items") or 1
         status = d.get("status")
@@ -266,7 +312,7 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
             progress=int(min(overall, 99)),
             current_item=idx,
             total_items=n_entries,
-            current_item_title=info_dict.get("title"),
+            current_item_title=info_dict.get("section_title") or info_dict.get("title"),
         )
 
     def pp_hook(d):
@@ -282,6 +328,19 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
         "progress_hooks": [progress_hook],
         "postprocessor_hooks": [pp_hook],
     }
+
+    if split_chapters:
+        def ranges_callback(_info_dict, _ydl):
+            for ch in selected_chapters:
+                yield {
+                    "start_time": ch["start_time"],
+                    "end_time": ch["end_time"],
+                    "title": ch["title"],
+                    "index": ch["index"],
+                }
+
+        ydl_opts["download_ranges"] = ranges_callback
+        ydl_opts["force_keyframes_at_cuts"] = True
 
     if is_audio:
         ydl_opts["postprocessors"] = [{
@@ -299,8 +358,14 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
         _update_job(job_id, status="error", error=str(e))
         return
 
-    entries = result.get("entries") if playlist else [result]
+    if playlist:
+        entries = result.get("entries")
+    elif split_chapters:
+        entries = result.get("requested_downloads") or []
+    else:
+        entries = [result]
     files = []
+    video_title = result.get("title") or "download"
 
     with _app.app_context():
         for entry in entries:
@@ -310,7 +375,11 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
             if not filename or not os.path.exists(filename):
                 continue
 
-            title = entry.get("title", "download")
+            # Section/chapter entries have unchanged fields like "title" stripped
+            # (see _resolve_filename), so fall back to the parent video's title.
+            base_title = entry.get("title") or video_title
+            section_title = entry.get("section_title")
+            title = f"{base_title} — {section_title}" if section_title else base_title
             files.append({"path": filename, "filename": os.path.basename(filename), "title": title})
 
             db.session.add(DownloadLog(

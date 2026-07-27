@@ -207,8 +207,10 @@ def info():
             {"label": "480p", "size": None},
             {"label": "Audio only (mp3)", "size": None},
         ]
+        result["chapters"] = []
     else:
         result["qualities"] = jobs.quality_options_for(data)
+        result["chapters"] = jobs.chapters_for(data)
 
     return jsonify(result)
 
@@ -217,6 +219,8 @@ def info():
 def api_create_job():
     url = request.json.get("url", "").strip()
     quality = request.json.get("quality", "Best")
+    split_mode = request.json.get("split_mode", "whole")
+    chapter_indices = request.json.get("chapter_indices") or []
 
     if not url:
         return jsonify({"error": "No URL provided"}), 400
@@ -225,7 +229,10 @@ def api_create_job():
     user_id = current_user.id if current_user.is_authenticated else None
 
     try:
-        job_id = jobs.create_job(url, quality, user_id, get_client_ip(), unlimited)
+        job_id = jobs.create_job(
+            url, quality, user_id, get_client_ip(), unlimited,
+            split_mode=split_mode, chapter_indices=chapter_indices,
+        )
     except jobs.JobError as e:
         return jsonify({"error": e.message, "limit": e.limit}), e.status
 

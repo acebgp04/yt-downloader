@@ -38,7 +38,7 @@ def donate_checkout():
         line_items=[{
             "price_data": {
                 "currency": "cad",
-                "product_data": {"name": "Donation to YouTube Downloader"},
+                "product_data": {"name": "Donation to Video Downloader"},
                 "unit_amount": amount_cents,
             },
             "quantity": 1,

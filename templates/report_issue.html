@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
 <meta name="robots" content="noindex, follow">
-<title>Report an issue - YouTube Downloader</title>
+<title>Report an issue - Video Downloader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
 <body>
   <div class="nav">
     <div class="nav-inner">
-      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>Video Downloader</a>
       <span class="nav-links">
         {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
       </span>

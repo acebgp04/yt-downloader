@@ -7,29 +7,29 @@
 <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
 <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
-<title>YouTube Downloader &mdash; Download YouTube Videos &amp; MP3s Free</title>
-<meta name="description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install &mdash; paste a link and download instantly. Playlist support for subscribers.">
-<meta name="keywords" content="youtube downloader, youtube to mp3, youtube video downloader, download youtube videos, youtube to mp4, youtube playlist downloader">
+<title>Video Downloader &mdash; Download Videos from YouTube, TikTok, Instagram &amp; More</title>
+<meta name="description" content="Download videos and audio (MP3) free from YouTube, TikTok, Instagram, Facebook, Twitter/X, Vimeo, SoundCloud, and Dailymotion, in the resolution you want. No software to install &mdash; paste a link and download instantly. Playlist support for subscribers.">
+<meta name="keywords" content="video downloader, youtube downloader, tiktok downloader, instagram video downloader, facebook video downloader, twitter video downloader, vimeo downloader, video to mp3, download videos online">
 <link rel="canonical" href="{{ base_url }}/">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="YouTube Downloader — Download YouTube Videos & MP3s Free">
-<meta property="og:description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install — paste a link and download instantly.">
+<meta property="og:title" content="Video Downloader — Download Videos from YouTube, TikTok, Instagram & More">
+<meta property="og:description" content="Download videos and audio (MP3) free from YouTube, TikTok, Instagram, Facebook, Twitter/X, Vimeo, SoundCloud, and Dailymotion. No software to install — paste a link and download instantly.">
 <meta property="og:url" content="{{ base_url }}/">
 <meta property="og:image" content="{{ base_url }}/static/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="YouTube Downloader — Download YouTube Videos & MP3s Free">
-<meta name="twitter:description" content="Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install — paste a link and download instantly.">
+<meta name="twitter:title" content="Video Downloader — Download Videos from YouTube, TikTok, Instagram & More">
+<meta name="twitter:description" content="Download videos and audio (MP3) free from YouTube, TikTok, Instagram, Facebook, Twitter/X, Vimeo, SoundCloud, and Dailymotion. No software to install — paste a link and download instantly.">
 <meta name="twitter:image" content="{{ base_url }}/static/og-image.png">
 
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "YouTube Downloader",
+  "name": "Video Downloader",
   "url": "{{ base_url }}/",
   "image": "{{ base_url }}/static/og-image.png",
   "applicationCategory": "MultimediaApplication",
@@ -39,7 +39,7 @@
     "price": "0",
     "priceCurrency": "USD"
   },
-  "description": "Download YouTube videos and audio (MP3) free, in the resolution you want. No software to install."
+  "description": "Download videos and audio (MP3) free from YouTube, TikTok, Instagram, Facebook, Twitter/X, Vimeo, SoundCloud, and Dailymotion, in the resolution you want. No software to install."
 }
 </script>
 
@@ -59,7 +59,7 @@
 <body>
   <div class="nav">
     <div class="nav-inner">
-      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>YouTube Downloader</a>
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>Video Downloader</a>
       <span class="nav-links">
         {% if current_user.is_authenticated %}
           {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> <a href="{{ url_for('auth.logout') }}">Log out</a>
@@ -72,12 +72,23 @@
 
   <div class="page page-wide hero">
     <div class="badge-pill"><span class="dot"></span>No installs &middot; files deleted after download</div>
-    <h1>Download any YouTube video<span class="accent-dot">.</span></h1>
+    <h1>Download videos from anywhere<span class="accent-dot">.</span></h1>
     <p class="subtitle">Paste a link, pick MP4 or MP3, and it starts instantly with a live progress bar.</p>
+
+    <div class="chips" style="justify-content: center; margin-top: 10px;">
+      <span class="chip">YouTube</span>
+      <span class="chip">TikTok</span>
+      <span class="chip">Instagram</span>
+      <span class="chip">Facebook</span>
+      <span class="chip">Twitter / X</span>
+      <span class="chip">Vimeo</span>
+      <span class="chip">SoundCloud</span>
+      <span class="chip">Dailymotion</span>
+    </div>
 
     <div class="card tool-card">
       <div class="row" id="urlRow">
-        <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=...">
+        <input type="text" id="url" placeholder="Paste a video URL — YouTube, TikTok, Instagram, and more">
         <button id="continueBtn">Continue</button>
       </div>
 
@@ -183,23 +194,24 @@
     <section style="margin-top: 48px; text-align: left;">
       <h2 style="font-size: 1.2rem; font-weight: 600;">How it works</h2>
       <p class="subtitle">
-        Paste any YouTube video URL above and choose a format &mdash; MP4 video in the resolution
-        you want, or MP3 audio only. Click Download and the file starts processing right away,
-        with a live progress bar so you can see exactly how far along it is. No account, no
-        software installs, no browser extensions.
+        Paste a video URL above from YouTube, TikTok, Instagram, Facebook, Twitter/X, Vimeo,
+        SoundCloud, or Dailymotion and choose a format &mdash; MP4 video in the resolution you
+        want, or MP3 audio only. Click Download and the file starts processing right away, with
+        a live progress bar so you can see exactly how far along it is. No account, no software
+        installs, no browser extensions.
       </p>
 
       <h2 style="font-size: 1.2rem; font-weight: 600;">Video and audio downloads</h2>
       <p class="subtitle">
-        Download YouTube videos as MP4 files in the best available quality, or extract just the
-        audio as an MP3. Free accounts get a handful of downloads per day at a generous length
-        limit &mdash; enough for the vast majority of single videos.
+        Download videos as MP4 files in the best available quality, or extract just the audio as
+        an MP3. Free accounts get a handful of downloads per day at a generous length limit
+        &mdash; enough for the vast majority of single videos.
       </p>
 
       <h2 style="font-size: 1.2rem; font-weight: 600;">Playlist downloads</h2>
       <p class="subtitle">
-        Subscribers can download entire YouTube playlists in one go, with no daily limit and no
-        length cap on individual videos.
+        Subscribers can download entire playlists in one go, with no daily limit and no length
+        cap on individual videos.
       </p>
     </section>
   </div>

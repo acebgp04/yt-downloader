@@ -12,9 +12,9 @@ from yt_dlp.utils import sanitize_filename
 from models import db, DownloadLog
 
 # Free/anonymous users get unlimited downloads of videos up to 30 min, plus
-# one longer (>30 min) video per day; more long videos require a subscription.
+# three longer (>30 min) videos per day; more long videos require a subscription.
 # Playlist gating is unaffected.
-FREE_DOWNLOADS_PER_DAY = 1
+FREE_DOWNLOADS_PER_DAY = 3
 FREE_MAX_DURATION_SECONDS = 30 * 60
 JOB_TTL_SECONDS = 60 * 60
 

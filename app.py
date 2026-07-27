@@ -147,12 +147,13 @@ def index():
     daily_cap_enabled = jobs.FREE_DOWNLOADS_PER_DAY is not None
     remaining = None
     if not unlimited_user and daily_cap_enabled:
-        used = jobs.downloads_used_today(get_client_ip())
+        used = jobs.long_downloads_used_today(get_client_ip())
         remaining = max(0, jobs.FREE_DOWNLOADS_PER_DAY - used)
     return render_template(
         "index.html",
         remaining=remaining,
         limit=jobs.FREE_DOWNLOADS_PER_DAY,
+        max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
         unlimited_user=unlimited_user,
         daily_cap_enabled=daily_cap_enabled,
         homepage_ad=get_active_ad("homepage_banner"),
@@ -185,6 +186,11 @@ def info():
     is_playlist = jobs.is_playlist_info(data)
     unlimited = user_is_unlimited()
     duration = data.get("duration") or 0
+    is_long = duration > jobs.FREE_MAX_DURATION_SECONDS
+
+    blocked_long_video = False
+    if not unlimited and not is_playlist and is_long and jobs.FREE_DOWNLOADS_PER_DAY is not None:
+        blocked_long_video = jobs.long_downloads_used_today(get_client_ip()) >= jobs.FREE_DOWNLOADS_PER_DAY
 
     result = {
         "title": data.get("title"),
@@ -193,6 +199,7 @@ def info():
         "uploader": data.get("uploader"),
         "is_playlist": is_playlist,
         "unlimited": unlimited,
+        "blocked_long_video": blocked_long_video,
     }
 
     if is_playlist:

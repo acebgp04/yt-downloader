@@ -35,6 +35,7 @@ class DownloadLog(db.Model):
     format = db.Column(db.String(20))
     quality = db.Column(db.String(50))
     job_kind = db.Column(db.String(20))
+    is_long_video = db.Column(db.Boolean, default=False, nullable=False)
 
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 

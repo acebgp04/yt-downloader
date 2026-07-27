@@ -153,11 +153,12 @@
       {% if unlimited_user %}
         Unlimited downloads and playlists &mdash; thanks for subscribing.
       {% elif not daily_cap_enabled %}
-        No daily limit right now &middot;
+        Unlimited videos under {{ max_minutes }} min, no daily limit right now &middot;
         <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get playlists</a>
         &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
       {% else %}
-        <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} free download{{ "s" if limit != 1 else "" }} left today, any length &middot;
+        Unlimited videos under {{ max_minutes }} min &middot;
+        <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} longer video{{ "s" if limit != 1 else "" }} (over {{ max_minutes }} min) left today &middot;
         <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get unlimited + playlists</a>
         &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
       {% endif %}
@@ -367,6 +368,13 @@ function updateBlockState() {
     limitBanner.innerHTML = isAuthenticated
       ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
       : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
+  } else if (data.blocked_long_video && splitMode !== "chapters") {
+    blockedReason = "duration";
+    limitBanner.innerHTML = isAuthenticated
+      ? "You've used today's free long video (over 30 min) download. <a href=\"/account\">Subscribe for unlimited length</a>."
+      : "You've used today's free long video (over 30 min) download. <a href=\"/signup\">Sign up to subscribe</a>.";
     limitBanner.style.display = "block";
     actionArea.style.display = "none";
   } else {

@@ -11,9 +11,11 @@ from yt_dlp.utils import sanitize_filename
 
 from models import db, DownloadLog
 
-# Free/anonymous users get one whole-video download per day, no length cap;
-# more than that requires a subscription. Playlist gating is unaffected.
+# Free/anonymous users get unlimited downloads of videos up to 30 min, plus
+# one longer (>30 min) video per day; more long videos require a subscription.
+# Playlist gating is unaffected.
 FREE_DOWNLOADS_PER_DAY = 1
+FREE_MAX_DURATION_SECONDS = 30 * 60
 JOB_TTL_SECONDS = 60 * 60
 
 DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), "yt-downloader")
@@ -66,6 +68,14 @@ def downloads_used_today(ip_address):
     return DownloadLog.query.filter(
         DownloadLog.ip_address == ip_address,
         DownloadLog.created_at >= today_midnight_utc(),
+    ).count()
+
+
+def long_downloads_used_today(ip_address):
+    return DownloadLog.query.filter(
+        DownloadLog.ip_address == ip_address,
+        DownloadLog.created_at >= today_midnight_utc(),
+        DownloadLog.is_long_video.is_(True),
     ).count()
 
 
@@ -228,13 +238,20 @@ def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="w
     else:
         split_mode = "whole"
 
-    if not playlist and not unlimited and FREE_DOWNLOADS_PER_DAY is not None:
-        used = downloads_used_today(ip_address)
+    if split_mode == "chapters":
+        duration = sum((ch["end_time"] or 0) - (ch["start_time"] or 0) for ch in selected_chapters)
+    else:
+        duration = info.get("duration") or 0
+    is_long = duration > FREE_MAX_DURATION_SECONDS
+
+    if not playlist and not unlimited and is_long and FREE_DOWNLOADS_PER_DAY is not None:
+        used = long_downloads_used_today(ip_address)
         if used >= FREE_DOWNLOADS_PER_DAY:
             plural = "s" if FREE_DOWNLOADS_PER_DAY != 1 else ""
             raise JobError(
-                f"You've used your {FREE_DOWNLOADS_PER_DAY} free download{plural} for today. "
-                f"Subscribe for unlimited downloads.",
+                f"You've used your {FREE_DOWNLOADS_PER_DAY} free video{plural} over "
+                f"{FREE_MAX_DURATION_SECONDS // 60} minutes for today. Videos under "
+                f"{FREE_MAX_DURATION_SECONDS // 60} min stay unlimited, or subscribe for unlimited length too.",
                 403, "count",
             )
 
@@ -269,7 +286,7 @@ def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="w
     thread = threading.Thread(
         target=_run_job,
         args=(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id, selected_chapters,
-              force_whole_download_for_chapters),
+              force_whole_download_for_chapters, is_long),
         daemon=True,
     )
     thread.start()
@@ -331,7 +348,7 @@ def _resolve_filename(ydl, entry, is_audio):
 
 
 def _run_chapter_fallback(job_id, job_dir, url, selector, is_audio, quality_label, kind,
-                           selected_chapters, ip_address, user_id, progress_hook, pp_hook):
+                           selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long):
     """Download the whole video once and cut each selected chapter out of it
     locally with ffmpeg. Used for videos where a direct ranged/seeked download
     doesn't work (e.g. archived livestreams still served via a "live" DASH
@@ -364,6 +381,7 @@ def _run_chapter_fallback(job_id, job_dir, url, selector, is_audio, quality_labe
                     format="audio" if is_audio else "video",
                     quality=quality_label,
                     job_kind=kind,
+                    is_long_video=is_long,
                 ))
             db.session.commit()
         try:
@@ -381,7 +399,7 @@ def _run_chapter_fallback(job_id, job_dir, url, selector, is_audio, quality_labe
 
 
 def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id, selected_chapters=None,
-             force_whole_download_for_chapters=False):
+             force_whole_download_for_chapters=False, is_long=False):
     selected_chapters = selected_chapters or []
     split_chapters = bool(selected_chapters)
     kind = "chapters" if split_chapters else ("playlist" if playlist else "single")
@@ -466,7 +484,7 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
     if force_whole_download_for_chapters:
         _run_chapter_fallback(
             job_id, job_dir, url, selector, is_audio, quality_label, kind,
-            selected_chapters, ip_address, user_id, progress_hook, pp_hook,
+            selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long,
         )
         return
 
@@ -484,7 +502,7 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
         # each selected chapter out of it locally.
         _run_chapter_fallback(
             job_id, job_dir, url, selector, is_audio, quality_label, kind,
-            selected_chapters, ip_address, user_id, progress_hook, pp_hook,
+            selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long,
         )
         return
 
@@ -520,6 +538,7 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
                 format="audio" if is_audio else "video",
                 quality=quality_label,
                 job_kind=kind,
+                is_long_video=is_long,
             ))
         db.session.commit()
 

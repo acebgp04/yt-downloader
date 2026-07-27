@@ -502,6 +502,7 @@ function triggerDownloads(jobId, files) {
 }
 
 let postprocessingStartedAt = null;
+let itemDownloadStartedAt = null;
 
 function formatElapsed(ms) {
   const totalSeconds = Math.round(ms / 1000);
@@ -529,9 +530,14 @@ function pollJob(jobId, sourceUrl, quality) {
 
       progressBar.value = job.progress;
       if (job.kind === "playlist" || job.kind === "chapters") {
+        if (!itemDownloadStartedAt || itemDownloadStartedAt.item !== job.current_item) {
+          itemDownloadStartedAt = { item: job.current_item, at: Date.now() };
+        }
+        const elapsed = formatElapsed(Date.now() - itemDownloadStartedAt.at);
         progressLabel.textContent = `Item ${job.current_item} of ${job.total_items}` +
-          (job.current_item_title ? `: ${job.current_item_title}` : "") + ` — ${job.progress}%`;
-        progressBar.classList.remove("progress-pulse");
+          (job.current_item_title ? `: ${job.current_item_title}` : "") +
+          ` — ${job.progress}% (${elapsed} elapsed)`;
+        progressBar.classList.add("progress-pulse");
       } else if (job.status === "postprocessing") {
         if (!postprocessingStartedAt) postprocessingStartedAt = Date.now();
         const elapsed = formatElapsed(Date.now() - postprocessingStartedAt);
@@ -539,6 +545,7 @@ function pollJob(jobId, sourceUrl, quality) {
         progressBar.classList.add("progress-pulse");
       } else {
         postprocessingStartedAt = null;
+        itemDownloadStartedAt = null;
         progressBar.classList.remove("progress-pulse");
         progressLabel.textContent = `${job.progress}%`;
       }
@@ -546,6 +553,8 @@ function pollJob(jobId, sourceUrl, quality) {
       if (job.status === "finished") {
         clearInterval(interval);
         progressWrap.style.display = "none";
+        actionArea.style.display = "block";
+        downloadBtn.disabled = false;
         statusEl.textContent = "";
         triggerDownloads(jobId, job.files);
         const names = job.files.map(f => f.title).join(", ");
@@ -588,10 +597,12 @@ downloadBtn.addEventListener("click", async () => {
   reportLink.innerHTML = "";
   downloadBtn.disabled = true;
   actionArea.style.display = "none";
+  donePanel.style.display = "none";
   progressWrap.style.display = "block";
   progressBar.value = 0;
   progressBar.classList.remove("progress-pulse");
   postprocessingStartedAt = null;
+  itemDownloadStartedAt = null;
   progressLabel.textContent = "Starting...";
 
   try {

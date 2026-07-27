@@ -221,7 +221,6 @@ def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="w
         )
 
     selected_chapters = []
-    force_whole_download_for_chapters = False
     if playlist:
         split_mode = "whole"
     elif split_mode == "chapters":
@@ -229,12 +228,6 @@ def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="w
         selected_chapters = [ch for ch in chapters_for(info) if ch["index"] in wanted]
         if not selected_chapters:
             raise JobError("No chapters selected.", 400)
-        # Archived livestreams are often still served via a "live" DASH
-        # manifest that can't be seeked/ranged directly by ffmpeg (fails slowly,
-        # via retries, rather than a clean fast error) -- detect this upfront
-        # and go straight to downloading the whole thing once + cutting
-        # chapters out locally, instead of a doomed-but-slow range attempt.
-        force_whole_download_for_chapters = info.get("live_status") in ("was_live", "post_live")
     else:
         split_mode = "whole"
 
@@ -286,7 +279,7 @@ def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="w
     thread = threading.Thread(
         target=_run_job,
         args=(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id, selected_chapters,
-              force_whole_download_for_chapters, is_long),
+              is_long),
         daemon=True,
     )
     thread.start()
@@ -316,26 +309,23 @@ def _download_whole_for_chapter_fallback(job_dir, url, selector, is_audio, progr
         "progress_hooks": [progress_hook],
         "postprocessor_hooks": [pp_hook],
     }
-    if is_audio:
-        ydl_opts["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": "mp3",
-            "preferredquality": "192",
-        }]
-    else:
+    if not is_audio:
         ydl_opts["merge_output_format"] = "mp4"
+    # Deliberately no FFmpegExtractAudio here even when is_audio: that would
+    # re-encode the *entire* video's audio to mp3 before we only need a few
+    # chapters cut out of it. Keep the raw downloaded audio format and let
+    # _cut_chapter_locally do the (per-chapter, much cheaper) mp3 encode.
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         result = ydl.extract_info(url, download=True)
-        source_path = _resolve_filename(ydl, result, is_audio)
+        source_path = _resolve_filename(ydl, result, is_audio=False)
     return source_path, result.get("title") or "download"
 
 
 def _resolve_filename(ydl, entry, is_audio):
-    # Section/chapter downloads strip unchanged fields (e.g. "title") from the
-    # entry dict, which breaks prepare_filename()'s recomputation -- but they
-    # do set "filepath" to the final resolved (post-postprocessing) path, so
-    # prefer that when present.
+    # "filepath" is the final resolved (post-postprocessing) path when present
+    # -- prefer it over recomputing via prepare_filename(), which can be wrong
+    # for entries missing fields prepare_filename's template needs.
     filepath = entry.get("filepath")
     if filepath:
         return filepath
@@ -349,10 +339,16 @@ def _resolve_filename(ydl, entry, is_audio):
 
 def _run_chapter_fallback(job_id, job_dir, url, selector, is_audio, quality_label, kind,
                            selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long):
-    """Download the whole video once and cut each selected chapter out of it
-    locally with ffmpeg. Used for videos where a direct ranged/seeked download
-    doesn't work (e.g. archived livestreams still served via a "live" DASH
-    manifest). Updates the job to "finished" or "error" itself."""
+    """Download the whole video once (via yt-dlp's normal, fast native
+    downloader) and cut each selected chapter out of it locally with ffmpeg.
+
+    This is the *only* strategy used for chapter splitting: directly
+    range-seeking into the remote stream via ffmpeg (yt-dlp's
+    download_ranges/force_keyframes_at_cuts) measured at ~100KB/s against
+    YouTube's CDN regardless of settings -- 15-20x slower than the whole-file
+    native downloader achieves, and outright fails for some videos (e.g.
+    archived livestreams still served via a "live" DASH manifest). Updates
+    the job to "finished" or "error" itself."""
     try:
         source_path, video_title = _download_whole_for_chapter_fallback(
             job_dir, url, selector, is_audio, progress_hook, pp_hook,
@@ -399,29 +395,16 @@ def _run_chapter_fallback(job_id, job_dir, url, selector, is_audio, quality_labe
 
 
 def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_address, user_id, selected_chapters=None,
-             force_whole_download_for_chapters=False, is_long=False):
+             is_long=False):
     selected_chapters = selected_chapters or []
     split_chapters = bool(selected_chapters)
     kind = "chapters" if split_chapters else ("playlist" if playlist else "single")
     job_dir = os.path.join(DOWNLOAD_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
-    if playlist:
-        outtmpl = os.path.join(job_dir, "%(playlist_index)s - %(title)s.%(ext)s")
-    elif split_chapters:
-        outtmpl = os.path.join(job_dir, "%(title)s - %(section_number)03d - %(section_title)s.%(ext)s")
-    else:
-        outtmpl = os.path.join(job_dir, "%(title)s.%(ext)s")
-
-    # download_ranges yields chapters with their original position in the full
-    # video (needed for %(section_number)03d in filenames), but progress should
-    # reflect position within the user's *selection* -- map one to the other.
-    chapter_position = {ch["index"]: i + 1 for i, ch in enumerate(selected_chapters)}
-
     def progress_hook(d):
         info_dict = d.get("info_dict") or {}
-        raw_idx = info_dict.get("playlist_index") or info_dict.get("section_number") or 1
-        idx = chapter_position.get(raw_idx, raw_idx)
+        idx = info_dict.get("playlist_index") or 1
         current_job = get_job(job_id) or {}
         n_entries = info_dict.get("n_entries") or current_job.get("total_items") or 1
         status = d.get("status")
@@ -442,12 +425,24 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
             progress=int(min(overall, 99)),
             current_item=idx,
             total_items=n_entries,
-            current_item_title=info_dict.get("section_title") or info_dict.get("title"),
+            current_item_title=info_dict.get("title"),
         )
 
     def pp_hook(d):
         if d.get("status") == "started":
             _update_job(job_id, status="postprocessing")
+
+    if split_chapters:
+        _run_chapter_fallback(
+            job_id, job_dir, url, selector, is_audio, quality_label, kind,
+            selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long,
+        )
+        return
+
+    if playlist:
+        outtmpl = os.path.join(job_dir, "%(playlist_index)s - %(title)s.%(ext)s")
+    else:
+        outtmpl = os.path.join(job_dir, "%(title)s.%(ext)s")
 
     ydl_opts = {
         "outtmpl": outtmpl,
@@ -459,19 +454,6 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
         "postprocessor_hooks": [pp_hook],
     }
 
-    if split_chapters:
-        def ranges_callback(_info_dict, _ydl):
-            for ch in selected_chapters:
-                yield {
-                    "start_time": ch["start_time"],
-                    "end_time": ch["end_time"],
-                    "title": ch["title"],
-                    "index": ch["index"],
-                }
-
-        ydl_opts["download_ranges"] = ranges_callback
-        ydl_opts["force_keyframes_at_cuts"] = True
-
     if is_audio:
         ydl_opts["postprocessors"] = [{
             "key": "FFmpegExtractAudio",
@@ -481,37 +463,14 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
     else:
         ydl_opts["merge_output_format"] = "mp4"
 
-    if force_whole_download_for_chapters:
-        _run_chapter_fallback(
-            job_id, job_dir, url, selector, is_audio, quality_label, kind,
-            selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long,
-        )
-        return
-
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             result = ydl.extract_info(url, download=True)
     except Exception as e:
-        if not split_chapters:
-            _update_job(job_id, status="error", error=str(e))
-            return
-
-        # Range-based chapter download failed -- some videos can't be seeked
-        # directly by ffmpeg for reasons the upfront live_status check didn't
-        # catch. Fall back to downloading the whole video once and cutting
-        # each selected chapter out of it locally.
-        _run_chapter_fallback(
-            job_id, job_dir, url, selector, is_audio, quality_label, kind,
-            selected_chapters, ip_address, user_id, progress_hook, pp_hook, is_long,
-        )
+        _update_job(job_id, status="error", error=str(e))
         return
 
-    if playlist:
-        entries = result.get("entries")
-    elif split_chapters:
-        entries = result.get("requested_downloads") or []
-    else:
-        entries = [result]
+    entries = result.get("entries") if playlist else [result]
     files = []
     video_title = result.get("title") or "download"
 
@@ -523,11 +482,7 @@ def _run_job(job_id, url, selector, is_audio, quality_label, playlist, ip_addres
             if not filename or not os.path.exists(filename):
                 continue
 
-            # Section/chapter entries have unchanged fields like "title" stripped
-            # (see _resolve_filename), so fall back to the parent video's title.
-            base_title = entry.get("title") or video_title
-            section_title = entry.get("section_title")
-            title = f"{base_title} — {section_title}" if section_title else base_title
+            title = entry.get("title") or video_title
             files.append({"path": filename, "filename": os.path.basename(filename), "title": title})
 
             db.session.add(DownloadLog(

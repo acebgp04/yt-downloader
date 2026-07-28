@@ -51,6 +51,15 @@
             </tr>
           {% endfor %}
         </table>
+        <div class="pagination">
+          {% if page > 1 %}
+            <a href="{{ url_for('history', page=page - 1) }}">&laquo; Prev</a>
+          {% endif %}
+          <span>Page {{ page }} of {{ total_pages }}</span>
+          {% if page < total_pages %}
+            <a href="{{ url_for('history', page=page + 1) }}">Next &raquo;</a>
+          {% endif %}
+        </div>
       {% else %}
         <p class="empty-state">No downloads yet.</p>
       {% endif %}

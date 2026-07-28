@@ -79,6 +79,15 @@
             </tr>
           {% endfor %}
         </table>
+        <div class="pagination">
+          {% if downloads_page > 1 %}
+            <a href="{{ url_for('admin.dashboard', downloads_page=downloads_page - 1) }}">&laquo; Prev</a>
+          {% endif %}
+          <span>Page {{ downloads_page }} of {{ downloads_total_pages }}</span>
+          {% if downloads_page < downloads_total_pages %}
+            <a href="{{ url_for('admin.dashboard', downloads_page=downloads_page + 1) }}">Next &raquo;</a>
+          {% endif %}
+        </div>
       {% else %}
         <p class="empty-state">No downloads yet.</p>
       {% endif %}

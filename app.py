@@ -160,16 +160,19 @@ def index():
     )
 
 
+HISTORY_PER_PAGE = 25
+
+
 @app.route("/history")
 @login_required
 def history():
-    logs = (
-        DownloadLog.query.filter_by(user_id=current_user.id)
-        .order_by(DownloadLog.created_at.desc())
-        .limit(200)
-        .all()
-    )
-    return render_template("history.html", logs=logs)
+    page = max(1, request.args.get("page", 1, type=int))
+    query = DownloadLog.query.filter_by(user_id=current_user.id).order_by(DownloadLog.created_at.desc())
+    total = query.count()
+    total_pages = max(1, -(-total // HISTORY_PER_PAGE))
+    page = min(page, total_pages)
+    logs = query.offset((page - 1) * HISTORY_PER_PAGE).limit(HISTORY_PER_PAGE).all()
+    return render_template("history.html", logs=logs, page=page, total_pages=total_pages)
 
 
 @app.route("/api/info", methods=["POST"])

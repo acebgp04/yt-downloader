@@ -11,10 +11,15 @@ Run as a user with sudo on the Ubuntu VM:
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv python3-pip ffmpeg git
+sudo apt install -y python3-venv python3-pip ffmpeg git unzip
 
 # Dedicated, unprivileged user to run the app
 sudo useradd --system --create-home --shell /usr/sbin/nologin ytdl
+
+# Deno: yt-dlp needs a real JS runtime to solve some sites' anti-bot JS
+# challenges (TikTok, and increasingly others). Installed system-wide to
+# /usr/local/bin so it's on PATH regardless of which user invokes yt-dlp.
+curl -fsSL https://deno.land/install.sh | sudo DENO_INSTALL=/usr/local sh
 ```
 
 ## 2. Get the code onto the VM

@@ -6,3 +6,4 @@ stripe
 python-dotenv
 gunicorn
 authlib
+curl_cffi>=0.10,<0.16

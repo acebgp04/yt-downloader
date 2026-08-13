@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+<title>YouTube to MP3 Converter &mdash; Download YouTube Audio Free</title>
+<meta name="description" content="Convert YouTube videos to MP3 for free, 192kbps audio quality. No software or browser extension needed &mdash; paste a YouTube link and download instantly. Works on iPhone, Android, and desktop.">
+<meta name="keywords" content="youtube to mp3, youtube to mp3 converter, download youtube audio, youtube mp3 converter, youtube audio downloader">
+<link rel="canonical" href="{{ base_url }}/youtube-to-mp3">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="YouTube to MP3 Converter — Download YouTube Audio Free">
+<meta property="og:description" content="Convert YouTube videos to MP3 for free, 192kbps audio quality. No software or browser extension needed — paste a YouTube link and download instantly.">
+<meta property="og:url" content="{{ base_url }}/youtube-to-mp3">
+<meta property="og:image" content="{{ base_url }}/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="YouTube to MP3 Converter — Download YouTube Audio Free">
+<meta name="twitter:description" content="Convert YouTube videos to MP3 for free, 192kbps audio quality. No software or browser extension needed — paste a YouTube link and download instantly.">
+<meta name="twitter:image" content="{{ base_url }}/static/og-image.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "YouTube to MP3 Converter",
+  "url": "{{ base_url }}/youtube-to-mp3",
+  "image": "{{ base_url }}/static/og-image.png",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "description": "Convert YouTube videos to MP3 for free, 192kbps audio quality. No software to install."
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is this YouTube to MP3 converter free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Free accounts get unlimited conversions of videos under 30 minutes, plus a few longer videos per day. Subscribing removes the daily limit and unlocks playlists."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What audio quality do I get?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "MP3 files at 192kbps."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I convert a whole YouTube playlist to MP3?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, with a subscription. Free accounts can convert single videos only."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on iPhone and Android?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. It works in any mobile browser on iPhone or Android — no app or extension to install."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you keep my converted files?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Files are deleted from our servers shortly after you download them — nothing is kept longer than necessary."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is it legal to convert YouTube videos to MP3?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Only convert videos you have the right to download — your own content, content in the public domain, or content the uploader has given you permission to save. Respect copyright and YouTube's terms of service."
+      }
+    }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
+<style>
+  .hero { text-align: center; }
+  .tool-card { max-width: 680px; margin: 26px auto 0; text-align: left; }
+  #revealPanel { display: none; }
+  #limitBanner { display: none; }
+  #progressWrap { display: none; margin-top: 16px; }
+  #donePanel { display: none; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>Video Downloader</a>
+      <span class="nav-links">
+        {% if current_user.is_authenticated %}
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> {% if current_user.is_admin %}<a href="{{ url_for('admin.dashboard') }}">Admin</a> {% endif %}<a href="{{ url_for('auth.logout') }}">Log out</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="page page-wide hero">
+    <div class="badge-pill"><span class="dot"></span>No installs &middot; files deleted after download</div>
+    <h1>YouTube to MP3 Converter<span class="accent-dot">.</span></h1>
+    <p class="subtitle">Convert YouTube videos to MP3, free, 192kbps audio &mdash; no software needed.</p>
+
+    {% include "_tool_widget.html" %}
+
+    <section style="margin-top: 48px; text-align: left;">
+      <h2 style="font-size: 1.2rem; font-weight: 600;">How to convert a YouTube video to MP3</h2>
+      <ol class="subtitle" style="padding-left: 20px;">
+        <li>Open YouTube and find the video you want.</li>
+        <li>Copy the video URL from your browser's address bar, or tap Share &rarr; Copy Link.</li>
+        <li>Paste the link into the box above &mdash; MP3 is selected by default.</li>
+        <li>Click Download &mdash; the file starts converting immediately with a live progress bar.</li>
+        <li>Click the download link when it's ready.</li>
+      </ol>
+
+      <h2 style="font-size: 1.2rem; font-weight: 600;">Frequently asked questions</h2>
+      <div style="margin-top: 12px;">
+        <h3 style="font-size: 1rem; font-weight: 600;">Is this YouTube to MP3 converter free?</h3>
+        <p class="subtitle">
+          Yes. Free accounts get unlimited conversions of videos under 30 minutes, plus a few
+          longer videos per day. Subscribing removes the daily limit and unlocks playlists.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">What audio quality do I get?</h3>
+        <p class="subtitle">MP3 files at 192kbps.</p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Can I convert a whole YouTube playlist to MP3?</h3>
+        <p class="subtitle">
+          Yes, with a subscription. Free accounts can convert single videos only.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Does it work on iPhone and Android?</h3>
+        <p class="subtitle">
+          Yes. It works in any mobile browser on iPhone or Android &mdash; no app or extension to
+          install.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Do you keep my converted files?</h3>
+        <p class="subtitle">
+          No. Files are deleted from our servers shortly after you download them &mdash; nothing is
+          kept longer than necessary.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Is it legal to convert YouTube videos to MP3?</h3>
+        <p class="subtitle">
+          Only convert videos you have the right to download &mdash; your own content, content in
+          the public domain, or content the uploader has given you permission to save. Respect
+          copyright and YouTube's terms of service. Need the video instead?
+          <a href="{{ url_for('youtube_downloader') }}">Download YouTube MP4</a>.
+        </p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

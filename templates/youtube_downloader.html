@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+<title>YouTube Video Downloader &mdash; Download YouTube Videos Free (MP4)</title>
+<meta name="description" content="Download YouTube videos as MP4 for free, in the resolution you want. No software or browser extension needed &mdash; paste a YouTube link and download instantly. Works on iPhone, Android, and desktop.">
+<meta name="keywords" content="youtube video downloader, youtube downloader online, download youtube video, youtube downloader, save youtube video">
+<link rel="canonical" href="{{ base_url }}/youtube-downloader">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="YouTube Video Downloader — Download YouTube Videos Free (MP4)">
+<meta property="og:description" content="Download YouTube videos as MP4 for free, in the resolution you want. No software or browser extension needed — paste a YouTube link and download instantly.">
+<meta property="og:url" content="{{ base_url }}/youtube-downloader">
+<meta property="og:image" content="{{ base_url }}/static/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="YouTube Video Downloader — Download YouTube Videos Free (MP4)">
+<meta name="twitter:description" content="Download YouTube videos as MP4 for free, in the resolution you want. No software or browser extension needed — paste a YouTube link and download instantly.">
+<meta name="twitter:image" content="{{ base_url }}/static/og-image.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "YouTube Video Downloader",
+  "url": "{{ base_url }}/youtube-downloader",
+  "image": "{{ base_url }}/static/og-image.png",
+  "applicationCategory": "MultimediaApplication",
+  "operatingSystem": "Any",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "description": "Download YouTube videos as MP4 for free, in the resolution you want. No software to install."
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is this YouTube downloader free?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Free accounts get unlimited downloads of videos under 30 minutes, plus a few longer videos per day. Subscribing removes the daily limit and unlocks playlists and chapter downloads."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on iPhone and Android?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. It works in any mobile browser on iPhone or Android — no app or extension to install. Paste the link, choose a format, and download."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What video quality can I download?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Up to the best quality available for that video, typically 1080p, with lower resolutions also offered. You can also extract audio only as an MP3."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you keep my downloaded videos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Files are deleted from our servers shortly after you download them — nothing is kept longer than necessary."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I download a whole YouTube playlist?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, with a subscription. Free accounts can download single videos only."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is it legal to download YouTube videos?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Only download videos you have the right to download — your own content, content in the public domain, or content the uploader has given you permission to save. Respect copyright and YouTube's terms of service."
+      }
+    }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
+<style>
+  .hero { text-align: center; }
+  .tool-card { max-width: 680px; margin: 26px auto 0; text-align: left; }
+  #revealPanel { display: none; }
+  #limitBanner { display: none; }
+  #progressWrap { display: none; margin-top: 16px; }
+  #donePanel { display: none; }
+</style>
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-inner">
+      <a href="{{ url_for('index') }}" class="brand"><span class="brand-mark"></span>Video Downloader</a>
+      <span class="nav-links">
+        {% if current_user.is_authenticated %}
+          {{ current_user.email }} <a href="{{ url_for('history') }}">History</a> <a href="{{ url_for('billing.account') }}">Account</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a> {% if current_user.is_admin %}<a href="{{ url_for('admin.dashboard') }}">Admin</a> {% endif %}<a href="{{ url_for('auth.logout') }}">Log out</a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}">Log in</a> <a href="{{ url_for('auth.signup') }}">Sign up</a> <a href="{{ url_for('donations.donate') }}">Donate</a> <a href="{{ url_for('reports.report_issue') }}">Report an issue</a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="page page-wide hero">
+    <div class="badge-pill"><span class="dot"></span>No installs &middot; files deleted after download</div>
+    <h1>YouTube Video Downloader<span class="accent-dot">.</span></h1>
+    <p class="subtitle">Download YouTube videos as MP4, free, in the resolution you want &mdash; no software needed.</p>
+
+    {% include "_tool_widget.html" %}
+
+    <section style="margin-top: 48px; text-align: left;">
+      <h2 style="font-size: 1.2rem; font-weight: 600;">How to download a YouTube video</h2>
+      <ol class="subtitle" style="padding-left: 20px;">
+        <li>Open YouTube and find the video you want.</li>
+        <li>Copy the video URL from your browser's address bar, or tap Share &rarr; Copy Link.</li>
+        <li>Paste the link into the box above.</li>
+        <li>Choose MP4 (video) or MP3 (audio only) and pick a resolution.</li>
+        <li>Click Download &mdash; the file starts processing immediately with a live progress bar.</li>
+        <li>Click the download link when it's ready.</li>
+      </ol>
+
+      <h2 style="font-size: 1.2rem; font-weight: 600;">Frequently asked questions</h2>
+      <div style="margin-top: 12px;">
+        <h3 style="font-size: 1rem; font-weight: 600;">Is this YouTube downloader free?</h3>
+        <p class="subtitle">
+          Yes. Free accounts get unlimited downloads of videos under 30 minutes, plus a few longer
+          videos per day. Subscribing removes the daily limit and unlocks playlists and chapter
+          downloads.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Does it work on iPhone and Android?</h3>
+        <p class="subtitle">
+          Yes. It works in any mobile browser on iPhone or Android &mdash; no app or extension to
+          install. Paste the link, choose a format, and download.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">What video quality can I download?</h3>
+        <p class="subtitle">
+          Up to the best quality available for that video, typically 1080p, with lower resolutions
+          also offered. You can also extract audio only as an
+          <a href="{{ url_for('youtube_to_mp3') }}">MP3</a>.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Do you keep my downloaded videos?</h3>
+        <p class="subtitle">
+          No. Files are deleted from our servers shortly after you download them &mdash; nothing is
+          kept longer than necessary.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Can I download a whole YouTube playlist?</h3>
+        <p class="subtitle">
+          Yes, with a subscription. Free accounts can download single videos only.
+        </p>
+
+        <h3 style="font-size: 1rem; font-weight: 600;">Is it legal to download YouTube videos?</h3>
+        <p class="subtitle">
+          Only download videos you have the right to download &mdash; your own content, content in
+          the public domain, or content the uploader has given you permission to save. Respect
+          copyright and YouTube's terms of service.
+        </p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

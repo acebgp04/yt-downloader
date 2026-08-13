@@ -1,0 +1,547 @@
+    <div class="card tool-card">
+      <div class="row" id="urlRow">
+        <input type="text" id="url" placeholder="{{ url_placeholder or 'Paste a video URL — YouTube, TikTok, Instagram, and more' }}">
+        <button id="continueBtn">Continue</button>
+      </div>
+
+      <div id="revealPanel">
+        <div class="preview" id="preview">
+          <div class="thumb-wrap">
+            <img id="thumb" src="" alt="">
+            <span class="duration-badge" id="durationBadge"></span>
+          </div>
+          <div>
+            <div class="meta-title" id="previewTitle"></div>
+            <div class="meta-sub" id="previewMeta"></div>
+          </div>
+        </div>
+
+        <div class="banner banner-warn" id="limitBanner"></div>
+
+        <div class="tabs" id="formatTabs">
+          <button type="button" class="tab {{ 'active' if (default_format or 'mp4') == 'mp4' else '' }}" id="tabMp4">MP4 &middot; Video</button>
+          <button type="button" class="tab {{ 'active' if default_format == 'mp3' else '' }}" id="tabMp3">MP3 &middot; Audio</button>
+        </div>
+
+        <div class="chips" id="qualityChips"></div>
+
+        <div id="splitSection" style="display: none; margin-top: 16px;">
+          <div class="tabs" id="splitTabs">
+            <button type="button" class="tab active" id="tabWhole">Whole video</button>
+            <button type="button" class="tab" id="tabChapters">Split by chapters</button>
+          </div>
+          <div id="chapterListWrap" style="display: none; margin-top: 10px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; margin-bottom: 8px;">
+              <input type="checkbox" id="selectAllChapters"> Select all
+            </label>
+            <div id="chapterList" style="max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;"></div>
+          </div>
+        </div>
+
+        <div id="actionArea" style="margin-top: 16px;">
+          <button id="downloadBtn" class="btn-full">Download <span id="downloadLabel"></span></button>
+        </div>
+
+        <div id="progressWrap">
+          <progress id="progressBar" value="0" max="100"></progress>
+          <div id="progressLabel"></div>
+        </div>
+
+        <div class="done-panel" id="donePanel">
+          <div class="check">&#10003;</div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="title">Ready &mdash; click below to download</div>
+            <div class="filename" id="doneFilename"></div>
+            <div id="doneLinks" style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;"></div>
+          </div>
+          <button type="button" id="downloadAnotherBtn" class="btn-secondary">Download another</button>
+        </div>
+      </div>
+
+      <div id="status"></div>
+      <div id="reportLink"></div>
+    </div>
+
+    <div class="subtitle" style="margin-top: 14px;">
+      {% if unlimited_user %}
+        Unlimited downloads and playlists &mdash; thanks for subscribing.
+      {% elif not daily_cap_enabled %}
+        Unlimited videos under {{ max_minutes }} min, no daily limit right now &middot;
+        <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get playlists</a>
+        &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
+      {% else %}
+        Unlimited videos under {{ max_minutes }} min &middot;
+        <span class="mono" style="color: var(--accent);">{{ remaining }}</span> of {{ limit }} longer video{{ "s" if limit != 1 else "" }} (over {{ max_minutes }} min) left today &middot;
+        <a href="{{ url_for('billing.account') if current_user.is_authenticated else url_for('auth.signup') }}">get unlimited + playlists</a>
+        &middot; enjoying this? <a href="{{ url_for('donations.donate') }}">support the project</a>
+      {% endif %}
+    </div>
+
+    {% if homepage_ad %}
+      {% if homepage_ad.ad_type == "script" %}
+        <div style="max-width: 680px; margin: 24px auto 0;">
+          {{ homepage_ad.script_content | safe }}
+        </div>
+      {% elif homepage_ad.ad_type == "smartlink" %}
+        <a href="{{ url_for('ads.ad_click', ad_id=homepage_ad.id) }}" target="_blank" rel="noopener sponsored"
+           class="btn btn-secondary" style="display: block; max-width: 680px; margin: 24px auto 0; text-align: center;">
+          {{ homepage_ad.link_text or "Sponsored" }}
+        </a>
+      {% else %}
+        <a href="{{ url_for('ads.ad_click', ad_id=homepage_ad.id) }}" target="_blank" rel="noopener sponsored"
+           style="display: block; max-width: 680px; margin: 24px auto 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);">
+          <img src="{{ homepage_ad.image_url }}" alt="{{ homepage_ad.alt_text or 'Advertisement' }}" style="display: block; width: 100%;">
+        </a>
+      {% endif %}
+    {% endif %}
+
+<script>
+const urlInput = document.getElementById("url");
+const continueBtn = document.getElementById("continueBtn");
+const statusEl = document.getElementById("status");
+const revealPanel = document.getElementById("revealPanel");
+const preview = document.getElementById("preview");
+const thumb = document.getElementById("thumb");
+const durationBadge = document.getElementById("durationBadge");
+const previewTitle = document.getElementById("previewTitle");
+const previewMeta = document.getElementById("previewMeta");
+const limitBanner = document.getElementById("limitBanner");
+const tabMp4 = document.getElementById("tabMp4");
+const tabMp3 = document.getElementById("tabMp3");
+const qualityChips = document.getElementById("qualityChips");
+const splitSection = document.getElementById("splitSection");
+const tabWhole = document.getElementById("tabWhole");
+const tabChapters = document.getElementById("tabChapters");
+const chapterListWrap = document.getElementById("chapterListWrap");
+const chapterListEl = document.getElementById("chapterList");
+const selectAllChapters = document.getElementById("selectAllChapters");
+const actionArea = document.getElementById("actionArea");
+const downloadBtn = document.getElementById("downloadBtn");
+const downloadLabel = document.getElementById("downloadLabel");
+const progressWrap = document.getElementById("progressWrap");
+const progressBar = document.getElementById("progressBar");
+const progressLabel = document.getElementById("progressLabel");
+const donePanel = document.getElementById("donePanel");
+const doneFilename = document.getElementById("doneFilename");
+const doneLinks = document.getElementById("doneLinks");
+const downloadAnotherBtn = document.getElementById("downloadAnotherBtn");
+const reportLink = document.getElementById("reportLink");
+
+const isAuthenticated = {{ "true" if current_user.is_authenticated else "false" }};
+const isSubscribed = {{ "true" if (current_user.is_authenticated and (current_user.is_subscribed or current_user.is_admin)) else "false" }};
+
+let currentInfo = null;
+let videoQualities = [];
+let selectedFormat = "{{ default_format or 'mp4' }}";
+let selectedQuality = null;
+let blockedReason = null; // "playlist" | "duration" | null
+let preferredQuality = {{ ("Audio only (mp3)" if default_format == "mp3" else none) | tojson }};
+let currentChapters = [];
+let splitMode = "whole";
+
+function selectSplit(mode) {
+  splitMode = mode;
+  tabWhole.classList.toggle("active", mode === "whole");
+  tabChapters.classList.toggle("active", mode === "chapters");
+  chapterListWrap.style.display = mode === "chapters" ? "block" : "none";
+  updateBlockState();
+}
+tabWhole.addEventListener("click", () => selectSplit("whole"));
+tabChapters.addEventListener("click", () => selectSplit("chapters"));
+
+function updateSelectAllState() {
+  const boxes = Array.from(document.querySelectorAll(".chapterCheck"));
+  selectAllChapters.checked = boxes.length > 0 && boxes.every((b) => b.checked);
+}
+
+selectAllChapters.addEventListener("change", () => {
+  document.querySelectorAll(".chapterCheck").forEach((b) => { b.checked = selectAllChapters.checked; });
+});
+
+chapterListEl.addEventListener("change", (e) => {
+  if (e.target.classList.contains("chapterCheck")) updateSelectAllState();
+});
+
+function renderChapterList() {
+  chapterListEl.innerHTML = "";
+  currentChapters.forEach((ch) => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex; align-items:center; gap:8px; font-size:0.85rem;";
+    const dur = ch.end_time ? ` <span style="color: var(--text-muted);">(${formatDuration(ch.end_time - ch.start_time)})</span>` : "";
+    row.innerHTML = `<input type="checkbox" class="chapterCheck" value="${ch.index}" checked> ${ch.title}${dur}`;
+    chapterListEl.appendChild(row);
+  });
+  updateSelectAllState();
+}
+
+function formatDuration(seconds) {
+  if (!seconds) return "";
+  seconds = Math.round(seconds);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function renderChips() {
+  qualityChips.innerHTML = "";
+  const list = selectedFormat === "mp3"
+    ? [{ label: "Audio only (mp3)", size: (currentInfo.qualities.find(q => q.label === "Audio only (mp3)") || {}).size, display: "192 kbps" }]
+    : videoQualities.map(q => ({ ...q, display: q.label }));
+
+  list.forEach((q) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (q.label === selectedQuality ? " active" : "");
+    chip.innerHTML = `<span>${q.display}</span>` + (q.size ? `<span class="chip-size">${q.size}</span>` : "");
+    chip.addEventListener("click", () => {
+      selectedQuality = q.label;
+      renderChips();
+      updateDownloadLabel();
+    });
+    qualityChips.appendChild(chip);
+  });
+
+  if (!list.find(q => q.label === selectedQuality) && list.length) {
+    selectedQuality = list[0].label;
+    renderChips();
+  }
+}
+
+function updateDownloadLabel() {
+  downloadLabel.textContent = selectedFormat === "mp3" ? "(192 kbps MP3)" : `(${selectedQuality})`;
+}
+
+function selectTab(format) {
+  selectedFormat = format;
+  tabMp4.classList.toggle("active", format === "mp4");
+  tabMp3.classList.toggle("active", format === "mp3");
+  selectedQuality = null;
+  renderChips();
+  updateDownloadLabel();
+}
+
+tabMp4.addEventListener("click", () => selectTab("mp4"));
+tabMp3.addEventListener("click", () => selectTab("mp3"));
+
+function updateBlockState() {
+  const data = currentInfo;
+  if (!data) return;
+
+  if (data.is_playlist && !isSubscribed) {
+    blockedReason = "playlist";
+    limitBanner.innerHTML = isAuthenticated
+      ? 'This is a playlist. Playlists require a subscription. <a href="/account">Subscribe for unlimited + playlists</a>.'
+      : 'This is a playlist. Playlists require a subscription. <a href="/signup">Sign up to subscribe</a>.';
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
+  } else if (splitMode === "chapters" && !isSubscribed) {
+    blockedReason = "chapters";
+    limitBanner.innerHTML = isAuthenticated
+      ? 'Chapter downloads require a subscription. <a href="/account">Subscribe for unlimited + chapters</a>.'
+      : 'Chapter downloads require a subscription. <a href="/signup">Sign up to subscribe</a>.';
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
+  } else if (data.blocked_long_video && splitMode !== "chapters") {
+    blockedReason = "duration";
+    limitBanner.innerHTML = isAuthenticated
+      ? "You've used today's free long video (over 30 min) download. <a href=\"/account\">Subscribe for unlimited length</a>."
+      : "You've used today's free long video (over 30 min) download. <a href=\"/signup\">Sign up to subscribe</a>.";
+    limitBanner.style.display = "block";
+    actionArea.style.display = "none";
+  } else {
+    blockedReason = null;
+    limitBanner.style.display = "none";
+    actionArea.style.display = "block";
+  }
+}
+
+function resetForm() {
+  urlInput.value = "";
+  revealPanel.style.display = "none";
+  donePanel.style.display = "none";
+  doneLinks.innerHTML = "";
+  progressWrap.style.display = "none";
+  actionArea.style.display = "block";
+  splitSection.style.display = "none";
+  statusEl.textContent = "";
+  statusEl.classList.remove("error");
+  reportLink.innerHTML = "";
+  continueBtn.disabled = false;
+  urlInput.focus();
+}
+
+downloadAnotherBtn.addEventListener("click", resetForm);
+
+function showReportLink(url, quality, error) {
+  const params = new URLSearchParams({ url: url || "", quality: quality || "", error: error || "" });
+  reportLink.innerHTML = `<a href="/report-issue?${params.toString()}">Report this issue</a>`;
+}
+
+async function handleContinue() {
+  const url = urlInput.value.trim();
+  if (!url) {
+    statusEl.textContent = "Please paste a URL.";
+    return;
+  }
+
+  statusEl.classList.remove("error");
+  statusEl.textContent = "Looking up video...";
+  continueBtn.disabled = true;
+
+  try {
+    const resp = await fetch("/api/info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      throw new Error(data.error || "Could not look up that URL");
+    }
+
+    currentInfo = data;
+    statusEl.textContent = "";
+
+    previewTitle.textContent = data.title || "";
+    previewMeta.textContent = data.is_playlist
+      ? `Playlist · ${data.total_items || "?"} videos`
+      : (data.uploader || "");
+    if (data.thumbnail) {
+      thumb.src = data.thumbnail;
+      preview.style.display = "flex";
+    } else {
+      preview.style.display = "none";
+    }
+    durationBadge.textContent = data.is_playlist ? "" : formatDuration(data.duration);
+    durationBadge.style.display = data.is_playlist ? "none" : "block";
+
+    videoQualities = (data.qualities || []).filter(q => q.label !== "Audio only (mp3)");
+
+    if (preferredQuality === "Audio only (mp3)") {
+      selectedFormat = "mp3";
+      tabMp3.classList.add("active");
+      tabMp4.classList.remove("active");
+      selectedQuality = "Audio only (mp3)";
+    } else {
+      selectedFormat = "mp4";
+      tabMp4.classList.add("active");
+      tabMp3.classList.remove("active");
+      selectedQuality = preferredQuality && videoQualities.find(q => q.label === preferredQuality)
+        ? preferredQuality
+        : null;
+    }
+    preferredQuality = null;
+    renderChips();
+    updateDownloadLabel();
+
+    currentChapters = (!data.is_playlist && data.chapters) ? data.chapters : [];
+    if (currentChapters.length > 0) {
+      splitSection.style.display = "block";
+      renderChapterList();
+      selectSplit("whole");
+    } else {
+      splitSection.style.display = "none";
+      splitMode = "whole";
+    }
+
+    updateBlockState();
+
+    revealPanel.style.display = "block";
+  } catch (e) {
+    statusEl.classList.add("error");
+    statusEl.textContent = e.message;
+  } finally {
+    continueBtn.disabled = false;
+  }
+}
+
+continueBtn.addEventListener("click", handleContinue);
+urlInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleContinue();
+});
+
+// Playlist/chapter file titles are all "<source title> — <item title>" --
+// find that shared prefix so the done panel can show it once instead of
+// repeating it for every file.
+function findCommonTitlePrefix(titles) {
+  const first = titles[0] || "";
+  const sepIndex = first.indexOf(" — ");
+  if (sepIndex === -1) return null;
+  const prefix = first.slice(0, sepIndex);
+  return titles.every((t) => t.startsWith(prefix + " — ")) ? prefix : null;
+}
+
+function stripTitlePrefix(title, prefix) {
+  if (prefix && title.startsWith(prefix + " — ")) {
+    return title.slice(prefix.length + 3);
+  }
+  return title;
+}
+
+let postprocessingStartedAt = null;
+let itemDownloadStartedAt = null;
+
+function formatElapsed(ms) {
+  const totalSeconds = Math.round(ms / 1000);
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function pollJob(jobId, sourceUrl, quality) {
+  const interval = setInterval(async () => {
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}`);
+      const job = await resp.json();
+
+      if (!resp.ok) {
+        clearInterval(interval);
+        progressWrap.style.display = "none";
+        actionArea.style.display = "block";
+        statusEl.classList.add("error");
+        statusEl.textContent = job.error || "Something went wrong.";
+        downloadBtn.disabled = false;
+        showReportLink(sourceUrl, quality, job.error);
+        return;
+      }
+
+      progressBar.value = job.progress;
+      if (job.kind === "playlist" || job.kind === "chapters") {
+        if (!itemDownloadStartedAt || itemDownloadStartedAt.item !== job.current_item) {
+          itemDownloadStartedAt = { item: job.current_item, at: Date.now() };
+        }
+        const elapsed = formatElapsed(Date.now() - itemDownloadStartedAt.at);
+        progressLabel.textContent = `Item ${job.current_item} of ${job.total_items}` +
+          (job.current_item_title ? `: ${job.current_item_title}` : "") +
+          ` — ${job.progress}% (${elapsed} elapsed)`;
+        progressBar.classList.add("progress-pulse");
+      } else if (job.status === "postprocessing") {
+        if (!postprocessingStartedAt) postprocessingStartedAt = Date.now();
+        const elapsed = formatElapsed(Date.now() - postprocessingStartedAt);
+        progressLabel.textContent = `Converting your file... this can take a few minutes for long videos (${elapsed} elapsed)`;
+        progressBar.classList.add("progress-pulse");
+      } else {
+        postprocessingStartedAt = null;
+        itemDownloadStartedAt = null;
+        progressBar.classList.remove("progress-pulse");
+        progressLabel.textContent = `${job.progress}%`;
+      }
+
+      if (job.status === "finished") {
+        clearInterval(interval);
+        progressWrap.style.display = "none";
+        actionArea.style.display = "block";
+        downloadBtn.disabled = false;
+        statusEl.textContent = "";
+        // No automatic a.click() here: browsers (Chrome in particular) can
+        // silently block programmatic downloads not tied to a fresh user
+        // gesture, and firing several in a row (playlists/chapters) can trip
+        // "multiple automatic downloads" protection that then suppresses
+        // *all* further downloads on the page, including genuine clicks on
+        // the manual links below. Always require an explicit click instead.
+        const titles = job.files.map(f => f.title);
+        const commonPrefix = job.files.length > 1 ? findCommonTitlePrefix(titles) : null;
+        doneFilename.textContent = commonPrefix
+          ? `${job.files.length} files from "${commonPrefix}"`
+          : titles.join(", ");
+        doneLinks.innerHTML = "";
+        job.files.forEach((f) => {
+          const a = document.createElement("a");
+          a.href = `/api/jobs/${jobId}/download/${f.index}`;
+          a.download = "";
+          a.className = "btn-link";
+          const label = stripTitlePrefix(f.title, commonPrefix);
+          a.textContent = job.files.length > 1 ? `Download: ${label}` : "Click here to download";
+          doneLinks.appendChild(a);
+        });
+        donePanel.style.display = "flex";
+      } else if (job.status === "error") {
+        clearInterval(interval);
+        progressWrap.style.display = "none";
+        actionArea.style.display = "block";
+        statusEl.classList.add("error");
+        statusEl.textContent = job.error || "Download failed.";
+        downloadBtn.disabled = false;
+        showReportLink(sourceUrl, quality, job.error);
+      }
+    } catch (e) {
+      // keep polling despite a transient network error
+    }
+  }, 1000);
+}
+
+downloadBtn.addEventListener("click", async () => {
+  const url = urlInput.value.trim();
+  const quality = selectedQuality || "Best";
+  if (!url || blockedReason) return;
+
+  const body = { url, quality };
+  if (splitMode === "chapters" && currentChapters.length > 0) {
+    const selected = Array.from(document.querySelectorAll(".chapterCheck:checked")).map((b) => parseInt(b.value, 10));
+    if (selected.length === 0) {
+      statusEl.classList.add("error");
+      statusEl.textContent = "Select at least one chapter, or switch to Whole video.";
+      return;
+    }
+    body.split_mode = "chapters";
+    body.chapter_indices = selected;
+  }
+
+  statusEl.classList.remove("error");
+  statusEl.textContent = "";
+  reportLink.innerHTML = "";
+  downloadBtn.disabled = true;
+  actionArea.style.display = "none";
+  donePanel.style.display = "none";
+  doneLinks.innerHTML = "";
+  progressWrap.style.display = "block";
+  progressBar.value = 0;
+  progressBar.classList.remove("progress-pulse");
+  postprocessingStartedAt = null;
+  itemDownloadStartedAt = null;
+  progressLabel.textContent = "Starting...";
+
+  try {
+    const resp = await fetch("/api/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      const err = new Error(data.error || "Could not start download");
+      err.isLimit = !!data.limit;
+      throw err;
+    }
+
+    pollJob(data.job_id, url, quality);
+  } catch (e) {
+    progressWrap.style.display = "none";
+    actionArea.style.display = "block";
+    statusEl.classList.add("error");
+    statusEl.textContent = e.message;
+    downloadBtn.disabled = false;
+    if (!e.isLimit) {
+      showReportLink(url, quality, e.message);
+    }
+  }
+});
+
+// If arriving from a "Download again" link (e.g. from History), prefill and auto-lookup.
+(function initFromQueryParams() {
+  const params = new URLSearchParams(window.location.search);
+  const prefillUrl = params.get("url");
+  if (!prefillUrl) return;
+
+  urlInput.value = prefillUrl;
+  preferredQuality = params.get("quality");
+  handleContinue();
+
+  const cleanUrl = window.location.pathname;
+  window.history.replaceState({}, "", cleanUrl);
+})();
+</script>

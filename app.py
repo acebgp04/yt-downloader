@@ -112,13 +112,18 @@ def robots_txt():
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
+    pages = [
+        ("/", "1.0"),
+        ("/youtube-downloader", "0.9"),
+        ("/youtube-to-mp3", "0.9"),
+    ]
+    urls = "\n".join(
+        f"  <url>\n    <loc>{BASE_URL}{path}</loc>\n    <changefreq>weekly</changefreq>\n    <priority>{priority}</priority>\n  </url>"
+        for path, priority in pages
+    )
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>{BASE_URL}/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
+{urls}
 </urlset>"""
     return xml, 200, {"Content-Type": "application/xml"}
 
@@ -141,23 +146,36 @@ def get_client_ip():
     return request.remote_addr
 
 
-@app.route("/")
-def index():
+def _tool_page_context():
     unlimited_user = user_is_unlimited()
     daily_cap_enabled = jobs.FREE_DOWNLOADS_PER_DAY is not None
     remaining = None
     if not unlimited_user and daily_cap_enabled:
         used = jobs.long_downloads_used_today(get_client_ip())
         remaining = max(0, jobs.FREE_DOWNLOADS_PER_DAY - used)
-    return render_template(
-        "index.html",
-        remaining=remaining,
-        limit=jobs.FREE_DOWNLOADS_PER_DAY,
-        max_minutes=jobs.FREE_MAX_DURATION_SECONDS // 60,
-        unlimited_user=unlimited_user,
-        daily_cap_enabled=daily_cap_enabled,
-        homepage_ad=get_active_ad("homepage_banner"),
-    )
+    return {
+        "remaining": remaining,
+        "limit": jobs.FREE_DOWNLOADS_PER_DAY,
+        "max_minutes": jobs.FREE_MAX_DURATION_SECONDS // 60,
+        "unlimited_user": unlimited_user,
+        "daily_cap_enabled": daily_cap_enabled,
+        "homepage_ad": get_active_ad("homepage_banner"),
+    }
+
+
+@app.route("/")
+def index():
+    return render_template("index.html", **_tool_page_context())
+
+
+@app.route("/youtube-downloader")
+def youtube_downloader():
+    return render_template("youtube_downloader.html", **_tool_page_context())
+
+
+@app.route("/youtube-to-mp3")
+def youtube_to_mp3():
+    return render_template("youtube_to_mp3.html", default_format="mp3", **_tool_page_context())
 
 
 HISTORY_PER_PAGE = 25

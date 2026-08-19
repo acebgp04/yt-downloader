@@ -1,7 +1,9 @@
 import os
+import shutil
 import subprocess
 import tempfile
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
@@ -17,6 +19,9 @@ from models import db, DownloadLog
 FREE_DOWNLOADS_PER_DAY = 3
 FREE_MAX_DURATION_SECONDS = 30 * 60
 JOB_TTL_SECONDS = 60 * 60
+# How often the background sweeper runs. Pruning used to happen only inside
+# create_job(), so a quiet period left expired files on disk indefinitely.
+PRUNE_INTERVAL_SECONDS = 10 * 60
 
 DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), "yt-downloader")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -57,6 +62,7 @@ class JobError(Exception):
 def init_app(app):
     global _app
     _app = app
+    start_pruner()
 
 
 def today_midnight_utc():
@@ -184,24 +190,59 @@ def _update_job(job_id, **fields):
             _jobs[job_id].update(fields)
 
 
+def _remove_job_dir(job_id):
+    # rmtree, not remove-each-known-file + rmdir: yt-dlp leaves .part fragments
+    # and pre-merge streams that were never registered in job["files"], which
+    # made the old rmdir() fail with ENOTEMPTY and leak the whole directory.
+    shutil.rmtree(os.path.join(DOWNLOAD_DIR, job_id), ignore_errors=True)
+
+
+def _prune_orphaned_dirs(cutoff):
+    # Job state lives only in this process's memory, so every restart used to
+    # strand the on-disk directories of jobs it no longer knows about. Nothing
+    # ever scanned DOWNLOAD_DIR itself, so those files stayed until the disk
+    # filled. Sweep by mtime, skipping anything still tracked in _jobs.
+    try:
+        entries = os.listdir(DOWNLOAD_DIR)
+    except OSError:
+        return
+    for name in entries:
+        path = os.path.join(DOWNLOAD_DIR, name)
+        with _jobs_lock:
+            if name in _jobs:
+                continue
+        try:
+            if not os.path.isdir(path) or os.path.getmtime(path) >= cutoff:
+                continue
+        except OSError:
+            continue
+        shutil.rmtree(path, ignore_errors=True)
+
+
 def _prune_old_jobs():
     cutoff = datetime.now(timezone.utc).timestamp() - JOB_TTL_SECONDS
     with _jobs_lock:
         expired = [jid for jid, j in _jobs.items() if j["created_at"].timestamp() < cutoff]
     for jid in expired:
-        job = get_job(jid)
-        if job:
-            for f in job.get("files", []):
-                try:
-                    os.remove(f["path"])
-                except OSError:
-                    pass
-            try:
-                os.rmdir(os.path.join(DOWNLOAD_DIR, jid))
-            except OSError:
-                pass
+        _remove_job_dir(jid)
         with _jobs_lock:
             _jobs.pop(jid, None)
+    _prune_orphaned_dirs(cutoff)
+
+
+def _prune_loop():
+    while True:
+        time.sleep(PRUNE_INTERVAL_SECONDS)
+        try:
+            _prune_old_jobs()
+        except Exception:
+            pass
+
+
+def start_pruner():
+    threading.Thread(target=_prune_loop, daemon=True).start()
+    # Clear anything stranded by a previous process before serving traffic.
+    _prune_old_jobs()
 
 
 def create_job(url, quality_label, user_id, ip_address, unlimited, split_mode="whole", chapter_indices=None):
